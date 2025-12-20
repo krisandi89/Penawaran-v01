@@ -89,11 +89,11 @@
         // --- DATA DEFAULT ---
 
         const USERS_DEFAULT = [
-            { id: 1, name: "Ir. Nuruzzaman", title: "Technical & Marketing Manager", pin: "1234" },
-            { id: 2, name: "Krisandi", title: "Design & Project Manager", pin: "1234" },
-            { id: 3, name: "Admin Penawaran", title: "Admin Staff", pin: "1234" },
-            { id: 4, name: "User 4", title: "Marketing", pin: "1234" },
-            { id: 5, name: "User 5", title: "Marketing", pin: "1234" }
+            { id: 1, name: "Ir. Nuruzzaman", title: "Technical & Marketing Manager", pin: "1234", phone: "0812-3456-7890" },
+            { id: 2, name: "Ir. Krisandi Saptyanto", title: "Design & Project Manager", pin: "1234", phone: "0812-9876-5432" },
+            { id: 3, name: "Admin Penawaran", title: "Admin Staff", pin: "1234", phone: "0812-1111-2222" },
+            { id: 4, name: "User 4", title: "Marketing", pin: "1234", phone: "0812-3333-4444" },
+            { id: 5, name: "User 5", title: "Marketing", pin: "1234", phone: "0812-5555-6666" }
         ];
 
         const TEMPLATES = {
@@ -525,21 +525,26 @@ Pembayaran:
                 }
 
                 // 5. SIGNATURE
-                doc.text("Hormat kami,", 140, yPos);
-                doc.text("PT MULTIBANGUN REKATAMA PATRIA", 140, yPos + 6);
+                doc.text("Hormat kami,", marginLeft, yPos);
                 
                 // Signature Image
                 if (currentUser.signature) {
-                    doc.addImage(currentUser.signature, 'PNG', 140, yPos + 10, 40, 25);
+                    doc.addImage(currentUser.signature, 'PNG', marginLeft, yPos + 4, 40, 25);
                 } else {
-                    doc.text("(...........................)", 140, yPos + 25);
+                    doc.text("(...........................)", marginLeft, yPos + 25);
                 }
                 
-                yPos += 40;
+                yPos += 35;
                 doc.setFont("helvetica", "bold");
-                doc.text(currentUser.name, 140, yPos);
+                doc.text(currentUser.name, marginLeft, yPos);
+
+                yPos += 5;
+                doc.setFont("helvetica", "italic");
+                doc.text(currentUser.title, marginLeft, yPos);
+
+                yPos += 5;
                 doc.setFont("helvetica", "normal");
-                doc.text(currentUser.title, 140, yPos + 6);
+                doc.text(currentUser.phone || "", marginLeft, yPos);
 
                 // Save
                 const fileName = `Penawaran_${formData.clientName.replace(/ /g, '_')}_${tab}.pdf`;
@@ -725,16 +730,14 @@ Pembayaran:
                                         {formData.terms}
                                     </div>
 
-                                    <div className="flex justify-end mt-12">
-                                        <div className="text-center w-48">
-                                            <div className="mb-1">Hormat Kami,</div>
-                                            <div className="font-bold mb-4">PT MULTIBANGUN R.P.</div>
-                                            <div className="h-20 flex items-center justify-center">
-                                                {currentUser.signature ? <img src={currentUser.signature} className="max-h-20" /> : <span className="text-gray-300 text-xs border p-1">Area Tanda Tangan</span>}
-                                            </div>
-                                            <div className="font-bold underline">{currentUser.name}</div>
-                                            <div className="text-xs">{currentUser.title}</div>
+                                    <div className="mt-12 text-left">
+                                        <div className="mb-4">Hormat kami,</div>
+                                        <div className="h-24 mb-2">
+                                             {currentUser.signature ? <img src={currentUser.signature} className="max-h-24" /> : <br/>}
                                         </div>
+                                        <div className="font-bold underline">{currentUser.name}</div>
+                                        <div className="italic">{currentUser.title}</div>
+                                        <div>{currentUser.phone}</div>
                                     </div>
                                 </div>
                             </div>
