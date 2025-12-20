@@ -102,8 +102,7 @@
                 items: [
                     { desc: "Material + Pekerjaan Pemasangan: MULTIblock Retaining Wall System", unit: "m2", qty: 450, price: 2400000 }
                 ],
-                terms: `Kondisi Penawaran:
-- Harga franco lokasi proyek (sesuai input di atas).
+                terms: `- Harga franco lokasi proyek (sesuai input di atas).
 - Harga belum termasuk PPN 11%.
 - Harga tidak termasuk persiapan lahan lokasi, perbaikan tanah pondasi.
 - Harga tidak termasuk pekerjaan tanah galian, timbunan dan pemadatan.
@@ -120,8 +119,7 @@ Pembayaran:
                 items: [
                     { desc: "Material Geomembrane HDPE (Tebal sesuai request)", unit: "m2", qty: 1000, price: 45000 }
                 ],
-                terms: `Syarat dan Kondisi:
-- Harga Loco Gudang (Bitung / Tangerang).
+                terms: `- Harga Loco Gudang (Bitung / Tangerang).
 - Harga belum termasuk PPN 11%.
 - Harga tidak termasuk biaya pengiriman (kecuali tercantum di tabel).
 - Penurunan barang (Unloading) di lokasi menjadi tanggung jawab Pembeli.
@@ -138,8 +136,7 @@ Pembayaran:
                     { desc: "Jasa Instalasi Geomembrane", unit: "m2", qty: 1000, price: 15000 },
                     { desc: "Biaya Mob-Demob & Akomodasi", unit: "Ls", qty: 1, price: 5000000 }
                 ],
-                terms: `Lingkup Pekerjaan & Syarat:
-- Harga Franco Proyek (dengan asumsi akses jalan layak untuk truk).
+                terms: `- Harga Franco Proyek (dengan asumsi akses jalan layak untuk truk).
 - Pihak Pembeli WAJIB menyediakan:
   1. Lahan yang sudah siap pasang (rata, padat, bebas benda tajam, kering).
   2. Listrik kerja / Genset min. 5-10 kVA + BBM di lokasi.
@@ -154,6 +151,23 @@ Pembayaran:
 - Material: 100% Cash Before Delivery.
 - Jasa: DP 50%, Pelunasan 50% setelah Berita Acara Selesai Pekerjaan.`
             }
+        };
+
+        const PreviewModal = ({ isOpen, onClose, pdfUrl }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full h-full max-w-5xl flex flex-col">
+                        <div className="flex justify-between items-center p-4 border-b">
+                            <h2 className="text-xl font-bold">Preview PDF</h2>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black">X</button>
+                        </div>
+                        <div className="flex-1 bg-gray-100 p-4">
+                            <iframe src={pdfUrl} className="w-full h-full border rounded shadow" title="PDF Preview"></iframe>
+                        </div>
+                    </div>
+                </div>
+            );
         };
 
         // --- COMPONENTS ---
@@ -304,6 +318,8 @@ Pembayaran:
             
             const [tab, setTab] = useState('multiblock');
             const [showSettings, setShowSettings] = useState(false);
+            const [showPreview, setShowPreview] = useState(false);
+            const [pdfUrl, setPdfUrl] = useState(null);
 
             // Form Data
             const [formData, setFormData] = useState({
@@ -379,7 +395,7 @@ Pembayaran:
             };
 
             // --- PDF GENERATION ---
-            const generatePDF = () => {
+            const createPDFDoc = () => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 
@@ -455,8 +471,6 @@ Pembayaran:
                 ]);
 
                 // Add Total Row
-                // Note: The reference table doesn't show a total row in the same style, but usually it's required.
-                // We'll keep it but adapt the colspan.
                 tableBody.push([
                     { content: 'TOTAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
                     { content: formatRupiah(calculateTotal()), styles: { fontStyle: 'bold', halign: 'center' } }
@@ -498,8 +512,6 @@ Pembayaran:
                         // If AutoTable adds a page, we need to inject the BG.
                         if (data.pageNumber > 1 && assets.background) {
                              // Re-draw background if autotable created a new page
-                             // Note: jsPDF autoTable hooks are tricky with z-index.
-                             // Simplified: We assume short tables. If long, manual loop is safer.
                         }
                     }
                 });
@@ -560,9 +572,23 @@ Pembayaran:
                 doc.setFont("helvetica", "normal");
                 doc.text(currentUser.phone || "", marginLeft, yPos);
 
-                // Save
-                const fileName = `Penawaran_${formData.clientName.replace(/ /g, '_')}_${tab}.pdf`;
-                doc.save(fileName);
+                return doc;
+            };
+
+            const handlePreview = () => {
+                const doc = createPDFDoc();
+                const blob = doc.output('blob');
+                const url = URL.createObjectURL(blob);
+                setPdfUrl(url);
+                setShowPreview(true);
+            };
+
+            const closePreview = () => {
+                setShowPreview(false);
+                if (pdfUrl) {
+                    URL.revokeObjectURL(pdfUrl);
+                    setPdfUrl(null);
+                }
             };
 
             // RENDER LOGIC
@@ -675,8 +701,8 @@ Pembayaran:
                                 <textarea className="w-full border p-2 rounded h-64 text-sm font-mono leading-relaxed" value={formData.terms} onChange={e => setFormData({...formData, terms: e.target.value})} />
                             </div>
 
-                            <button onClick={generatePDF} className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">
-                                <Icons.Printer size={20} /> CETAK PDF SEKARANG
+                            <button onClick={handlePreview} className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">
+                                <Icons.Printer size={20} /> PREVIEW PDF
                             </button>
                         </div>
 
@@ -766,6 +792,12 @@ Pembayaran:
                         setUsers={setUsers}
                         assets={assets}
                         setAssets={setAssets}
+                    />
+
+                    <PreviewModal
+                        isOpen={showPreview}
+                        onClose={closePreview}
+                        pdfUrl={pdfUrl}
                     />
                 </div>
             );
