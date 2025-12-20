@@ -433,34 +433,34 @@ Pembayaran:
                 
                 // Kiri: Nomor & Tujuan
                 doc.text(`No: ${formData.noSurat}`, marginLeft, yPos);
-                yPos += 10;
+                yPos += 8; // Reduce spacing
                 
                 doc.text("Kepada Yth:", marginLeft, yPos);
-                yPos += 6; // Spacing sedikit lebih lebar utk font 11
+                yPos += 5;
                 doc.setFont("helvetica", "bold");
                 doc.text(formData.clientName || "Nama Klien Belum Diisi", marginLeft, yPos);
                 doc.setFont("helvetica", "normal");
-                yPos += 6;
+                yPos += 5;
                 const clientAddrLines = doc.splitTextToSize(formData.clientAddress || "", 80);
                 doc.text(clientAddrLines, marginLeft, yPos);
-                yPos += (clientAddrLines.length * 6) + 4;
+                yPos += (clientAddrLines.length * 5) + 3;
                 
                 doc.text(`Up: ${formData.clientUp}`, marginLeft, yPos);
-                yPos += 12;
+                yPos += 10;
 
                 // Hal & Proyek
                 doc.text(`Hal: Penawaran Harga ${tab === 'multiblock' ? 'Retaining Wall' : 'Geomembrane'}`, marginLeft, yPos);
-                yPos += 6;
+                yPos += 5;
                 doc.text(`Proyek: ${formData.projectName}`, marginLeft, yPos);
-                yPos += 12;
+                yPos += 10;
 
                 // Pembuka
                 doc.text("Dengan hormat,", marginLeft, yPos);
-                yPos += 6;
+                yPos += 5;
                 const intro = `Sehubungan dengan kebutuhan proyek ${formData.projectName}, berikut kami sampaikan penawaran harga terbaik kami:`;
                 const introLines = doc.splitTextToSize(intro, 170);
                 doc.text(introLines, marginLeft, yPos);
-                yPos += (introLines.length * 6) + 4;
+                yPos += (introLines.length * 5) + 4;
 
                 // 3. TABEL ITEM
                 const tableBody = formData.items.map(item => [
@@ -519,32 +519,34 @@ Pembayaran:
                 yPos = doc.lastAutoTable.finalY + 12;
 
                 // Check page break logic
-                if (yPos > 230) { // 230mm is safe limit before footer
+                if (yPos > 240) { // Increased safe limit slightly as we are using tighter spacing
                     doc.addPage();
                     addBackground(); // Add BG to new page
                     yPos = marginTop;
                 }
 
                 // 4. SYARAT & KONDISI
+                doc.setFontSize(10); // Reduce font size to match Table and save space
                 doc.setFont("helvetica", "bold");
                 doc.text("Syarat dan Kondisi:", marginLeft, yPos);
-                yPos += 6;
+                yPos += 5;
                 doc.setFont("helvetica", "normal");
                 
                 const termsLines = doc.splitTextToSize(formData.terms, 170);
                 
                 // If terms are too long
-                if (yPos + (termsLines.length * 6) > 250) {
+                if (yPos + (termsLines.length * 4.5) > 260) {
                     doc.addPage();
                     addBackground(); // Add BG to new page
                     yPos = marginTop;
                 }
                 
                 doc.text(termsLines, marginLeft, yPos);
-                yPos += (termsLines.length * 6) + 15;
+                yPos += (termsLines.length * 4.5) + 10;
+                doc.setFontSize(11); // Reset font size for signature
 
-                // Check space for signature
-                if (yPos > 220) {
+                // Check space for signature (Need approx 40mm)
+                if (yPos > 245) {
                     doc.addPage();
                     addBackground(); // Add BG to new page
                     yPos = marginTop;
@@ -555,7 +557,8 @@ Pembayaran:
                 
                 // Signature Image
                 if (currentUser.signature) {
-                    doc.addImage(currentUser.signature, 'PNG', marginLeft, yPos + 4, 40, 25);
+                    // Removed 'PNG' to allow auto-detection of format (JPEG/PNG) from Data URL
+                    doc.addImage(currentUser.signature, null, marginLeft, yPos + 4, 40, 25);
                 } else {
                     doc.text("(...........................)", marginLeft, yPos + 25);
                 }
@@ -765,8 +768,8 @@ Pembayaran:
                                         </tbody>
                                     </table>
 
-                                    <div className="text-xs whitespace-pre-wrap font-sans mb-8 leading-relaxed">
-                                        <strong className="block text-sm mb-2">Syarat & Kondisi:</strong>
+                                    <div className="text-[10pt] whitespace-pre-wrap font-sans mb-8 leading-relaxed">
+                                        <strong className="block text-[10pt] font-bold mb-2">Syarat & Kondisi:</strong>
                                         {formData.terms}
                                     </div>
 
