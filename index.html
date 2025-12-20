@@ -449,31 +449,45 @@ Pembayaran:
                 // 3. TABEL ITEM
                 const tableBody = formData.items.map(item => [
                     item.desc,
-                    item.qty,
-                    item.unit,
-                    new Intl.NumberFormat('id-ID').format(item.price),
-                    new Intl.NumberFormat('id-ID').format(item.qty * item.price)
+                    `${item.qty} ${item.unit}`,
+                    formatRupiah(item.price),
+                    formatRupiah(item.qty * item.price)
                 ]);
 
                 // Add Total Row
+                // Note: The reference table doesn't show a total row in the same style, but usually it's required.
+                // We'll keep it but adapt the colspan.
                 tableBody.push([
-                    { content: 'TOTAL', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
-                    { content: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(calculateTotal()), styles: { fontStyle: 'bold' } }
+                    { content: 'TOTAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: formatRupiah(calculateTotal()), styles: { fontStyle: 'bold', halign: 'center' } }
                 ]);
 
                 doc.autoTable({
                     startY: yPos,
-                    head: [['Deskripsi', 'Vol', 'Sat', 'Harga Satuan', 'Jumlah']],
+                    head: [['Material', 'Kuantitas', 'Harga Satuan', 'Total Harga']],
                     body: tableBody,
                     theme: 'grid',
-                    headStyles: { fillColor: [41, 128, 185], textColor: 255, font: 'helvetica', fontSize: 10 },
-                    styles: { font: 'helvetica', fontSize: 10, cellPadding: 2 }, // Isi tabel sedikit lebih kecil dari body text
+                    headStyles: {
+                        fillColor: null, // Transparent
+                        textColor: 0, // Black
+                        fontStyle: 'bold',
+                        fontSize: 10,
+                        lineWidth: 0.1,
+                        lineColor: 0
+                    },
+                    styles: {
+                        font: 'helvetica',
+                        fontSize: 10,
+                        cellPadding: 2,
+                        textColor: 0,
+                        lineColor: 0,
+                        lineWidth: 0.1
+                    },
                     columnStyles: {
-                        0: { cellWidth: 80 },
-                        1: { cellWidth: 20, halign: 'center' },
-                        2: { cellWidth: 15, halign: 'center' },
-                        3: { cellWidth: 35, halign: 'right' },
-                        4: { cellWidth: 35, halign: 'right' }
+                        0: { cellWidth: 70, halign: 'left' },
+                        1: { cellWidth: 35, halign: 'center' },
+                        2: { cellWidth: 40, halign: 'center' },
+                        3: { cellWidth: 40, halign: 'center' }
                     },
                     margin: { left: marginLeft, right: marginRight },
                     // Logic to add background if table splits page
@@ -704,22 +718,22 @@ Pembayaran:
                                         Sehubungan dengan kebutuhan proyek <b>{formData.projectName}</b>, berikut kami sampaikan penawaran harga:
                                     </div>
 
-                                    <table className="w-full border-collapse mb-8">
-                                        <thead className="bg-blue-600 text-white text-xs">
+                                    <table className="w-full border-collapse mb-8 border border-black">
+                                        <thead className="text-black font-bold text-xs">
                                             <tr>
-                                                <th className="p-2 text-left">Deskripsi</th>
-                                                <th className="p-2 text-center">Vol</th>
-                                                <th className="p-2 text-right">Harsat</th>
-                                                <th className="p-2 text-right">Jumlah</th>
+                                                <th className="p-2 text-left border border-black">Material</th>
+                                                <th className="p-2 text-center border border-black">Kuantitas</th>
+                                                <th className="p-2 text-center border border-black">Harga Satuan</th>
+                                                <th className="p-2 text-center border border-black">Total Harga</th>
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm">
                                             {formData.items.map((item, i) => (
-                                                <tr key={i} className="border-b">
-                                                    <td className="p-2">{item.desc}</td>
-                                                    <td className="p-2 text-center">{item.qty} {item.unit}</td>
-                                                    <td className="p-2 text-right">{new Intl.NumberFormat('id-ID').format(item.price)}</td>
-                                                    <td className="p-2 text-right">{new Intl.NumberFormat('id-ID').format(item.price * item.qty)}</td>
+                                                <tr key={i}>
+                                                    <td className="p-2 border border-black">{item.desc}</td>
+                                                    <td className="p-2 text-center border border-black">{item.qty} {item.unit}</td>
+                                                    <td className="p-2 text-center border border-black">{formatRupiah(item.price)}</td>
+                                                    <td className="p-2 text-center border border-black">{formatRupiah(item.price * item.qty)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
