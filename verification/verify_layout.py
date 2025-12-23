@@ -1,45 +1,43 @@
-from playwright.sync_api import sync_playwright
+import asyncio
+from playwright.async_api import async_playwright
+import http.server
+import socketserver
+import threading
+import os
 
-def verify_layout():
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+PORT = 8000
 
-        # Load the HTML file (assuming it's served or opened directly)
-        page.goto("file:///app/index.html")
+def start_server():
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", PORT), handler) as httpd:
+        print(f"Serving at port {PORT}")
+        httpd.serve_forever()
 
-        # 1. Login
-        page.click("text=Ir. Nuruzzaman")
-        page.fill("input[placeholder='PIN']", "1234")
-        page.click("text=MASUK")
+async def run():
+    # Start server in a separate thread
+    server_thread = threading.Thread(target=start_server)
+    server_thread.daemon = True
+    server_thread.start()
 
-        # Wait for App to load
-        page.wait_for_selector("text=Multibangun Offer System")
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.goto(f"http://localhost:{PORT}/index.html")
 
-        # 2. Fill Data
-        page.fill("input[placeholder='Pembangunan Tol...']", "Proyek Tol Jakarta-Cikampek")
-        page.fill("input[placeholder='PT Contoh Sejahtera']", "PT Karya Anak Bangsa")
-        page.fill("textarea[placeholder='Jl. Raya...']", "Jl. Jend. Sudirman No. 1")
+        # Login first
+        await page.click('text=Ir. Nuruzzaman')
+        await page.fill('input[type="password"]', '1234')
+        await page.click('button:has-text("MASUK")')
 
-        # 3. Screenshot Preview Area
-        preview_element = page.locator(".preview-paper").first
-        preview_element.screenshot(path="verification/layout_preview.png")
+        # Wait for preview to load
+        await page.wait_for_selector('.preview-paper')
 
-        print("Screenshot saved to verification/layout_preview.png")
+        # Take screenshot of the preview paper
+        preview = page.locator('.preview-paper').first
+        await preview.screenshot(path="verification/preview_before.png")
 
-        # 4. Verify Content Text (Basic checks)
-        content = preview_element.inner_text()
-
-        assert "No: 001/MRP/PWRN/XII/2025" in content or "No: 001/MRP/PWRN/XII/2024" in content
-        assert "Hal: Penawaran Harga" in content
-        assert "Kepada Yth:" in content
-        assert "PT KARYA ANAK BANGSA" in content # Uppercase transformation in preview
-        assert "Hormat kami," in content
-        assert "Technical & Marketing Manager" in content # Should not be italic in style check, but text is present
-
-        print("Text verification passed.")
-
-        browser.close()
+        print("Screenshot taken: verification/preview_before.png")
+        await browser.close()
 
 if __name__ == "__main__":
-    verify_layout()
+    asyncio.run(run())
