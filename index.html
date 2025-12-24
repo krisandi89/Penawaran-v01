@@ -42,11 +42,11 @@
         .paper-content {
             position: relative;
             z-index: 10;
-            padding-top: 41mm;    /* Margin Atas untuk menghindari Header Kop */
-            padding-bottom: 20mm; /* Margin Bawah untuk menghindari Footer */
-            padding-left: 20mm;
-            padding-right: 20mm;
-            font-size: 11pt;      /* Ukuran Font 11 */
+            padding-top: 42.5mm;    /* Margin Atas 4.25cm */
+            padding-bottom: 35mm;   /* Margin Bawah 3.5cm */
+            padding-left: 23mm;     /* Margin Kiri 2.3cm */
+            padding-right: 23mm;    /* Margin Kanan 2.3cm */
+            font-size: 11pt;        /* Ukuran Font 11 */
             line-height: 1.4;
             height: 100%;
             display: flex;
@@ -447,6 +447,21 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 setFormData({ ...formData, items: newItems });
             };
 
+            const renderDescription = (text) => {
+                if (!text) return "";
+                return text.split('\n').map((line, i) => {
+                    const match = line.match(/^((?:Merk|Tipe|Ukuran [Rr]oll|Material)\s*:)\s*(.*)/);
+                    if (match) {
+                        return (
+                            <div key={i}>
+                                <span className="font-bold">{match[1]}</span> {match[2]}
+                            </div>
+                        );
+                    }
+                    return <div key={i}>{line}</div>;
+                });
+            };
+
             // --- PDF GENERATION ---
             const createPDFDoc = (signDims = null) => {
                 const { jsPDF } = window.jspdf;
@@ -475,9 +490,10 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 addBackground();
 
                 // MARGINS (SAFE ZONE)
-                const marginTop = 45;
-                const marginLeft = 20;
-                const marginRight = 20;
+                const marginTop = 42.5; // 4.25cm
+                const marginLeft = 23;  // 2.3cm
+                const marginRight = 23; // 2.3cm
+                // Bottom is handled by check logic (3.5cm -> max Y approx 262)
                 
                 let yPos = marginTop;
 
@@ -584,41 +600,73 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                             const item = formData.items[rowIndex];
 
+                            // Determine text content
+                            let cellText = "";
                             if (item.materialName !== undefined) {
-                                // Draw a white filled rectangle over the cell area to clear default text
-                                const { x, y, width, height } = data.cell;
-                                doc.setFillColor(255, 255, 255);
-                                doc.rect(x + 0.2, y + 0.2, width - 0.4, height - 0.4, 'F');
-
-                                doc.setTextColor(0, 0, 0);
-                                doc.setFontSize(10);
-
-                                let currentY = y + 4;
-
-                                doc.setFont("helvetica", "bold");
-                                doc.text(item.materialName, x + 2, currentY);
-                                currentY += 5;
-
-                                doc.text("Merk: ", x + 2, currentY);
-                                const merkWidth = doc.getTextWidth("Merk: ");
-                                doc.setFont("helvetica", "bold");
-                                doc.text(item.brand, x + 2 + merkWidth, currentY);
-                                currentY += 5;
-
-                                doc.setFont("helvetica", "normal");
-                                doc.text(`Tipe: ${item.type}`, x + 2, currentY);
-                                currentY += 5;
-
-                                doc.text(`Ukuran roll: ${item.rollSize}`, x + 2, currentY);
+                                // Legacy support or just use the constructed string
+                                cellText = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
+                            } else {
+                                cellText = item.desc;
                             }
+
+                            // Clean the cell
+                            const { x, y, width, height } = data.cell;
+                            doc.setFillColor(255, 255, 255);
+                            doc.rect(x + 0.2, y + 0.2, width - 0.4, height - 0.4, 'F');
+
+                            doc.setTextColor(0, 0, 0);
+                            doc.setFontSize(10);
+
+                            // Parse and Draw
+                            const lines = cellText.split('\n');
+                            let currentY = y + 4;
+                            const cellInnerWidth = width - 4; // 2mm padding each side
+
+                            lines.forEach(line => {
+                                const match = line.match(/^((?:Merk|Tipe|Ukuran [Rr]oll|Material)\s*:)\s*(.*)/);
+                                if (match) {
+                                    // Label (Bold)
+                                    doc.setFont("helvetica", "bold");
+                                    const label = match[1];
+                                    doc.text(label, x + 2, currentY);
+
+                                    const labelWidth = doc.getTextWidth(label);
+
+                                    // Value (Normal)
+                                    doc.setFont("helvetica", "normal");
+                                    const value = match[2];
+
+                                    // Check if value needs wrapping
+                                    // Available width for value
+                                    const availableWidth = cellInnerWidth - labelWidth - 1; // 1mm spacing
+
+                                    if (availableWidth > 0) {
+                                        const valueLines = doc.splitTextToSize(value, availableWidth);
+                                        doc.text(valueLines, x + 2 + labelWidth + 1, currentY);
+                                        currentY += (valueLines.length * 4); // Line height
+                                    } else {
+                                        // Fallback if label is too long (rare)
+                                        currentY += 4;
+                                        doc.text(value, x + 2, currentY);
+                                        currentY += 4;
+                                    }
+
+                                } else {
+                                    // Normal Line
+                                    doc.setFont("helvetica", "normal");
+                                    const wrappedLines = doc.splitTextToSize(line, cellInnerWidth);
+                                    doc.text(wrappedLines, x + 2, currentY);
+                                    currentY += (wrappedLines.length * 4);
+                                }
+                            });
                         }
                     }
                 });
 
                 yPos = doc.lastAutoTable.finalY + 12;
 
-                // Check page break logic
-                if (yPos > 240) {
+                // Check page break logic (297mm - 35mm = 262mm)
+                if (yPos > 262) {
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
@@ -642,7 +690,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                 const termsLines = doc.splitTextToSize(processedTerms, 170);
                 
-                if (yPos + (termsLines.length * 4.5) > 260) {
+                if (yPos + (termsLines.length * 4.5) > 262) {
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
@@ -655,7 +703,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 const closing = "Demikian penawaran harga ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.";
                 const closingLines = doc.splitTextToSize(closing, 170);
 
-                if (yPos + (closingLines.length * 4.5) > 260) {
+                if (yPos + (closingLines.length * 4.5) > 262) {
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
@@ -666,7 +714,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 doc.setFontSize(11);
 
                 // Check space for signature
-                if (yPos > 245) {
+                if (yPos > 245) { // Leave enough space for signature block
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
@@ -991,7 +1039,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                                             <div>Ukuran roll: {item.rollSize}</div>
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="whitespace-pre-wrap">{item.desc}</div>
+                                                                        <div className="whitespace-pre-wrap">{renderDescription(item.desc)}</div>
                                                                     )}
                                                                 </td>
                                                                 <td className="p-2 text-center border border-black align-top">{item.qty} {item.unit}</td>
