@@ -447,18 +447,86 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 setFormData({ ...formData, items: newItems });
             };
 
+            // Helper for drawing rich text (Markdown-style *bold*) in PDF
+            const drawRichLine = (doc, text, x, y, maxWidth) => {
+                const parts = text.split('*');
+                let currentX = x;
+                let currentY = y;
+                let buffer = ""; // Current line buffer to measure
+
+                // Flatten parts to words for wrapping?
+                // For simplicity in v2.1: We assume lines don't wrap heavily with bolding mid-sentence.
+                // We'll process parts.
+
+                parts.forEach((part, idx) => {
+                    const isBold = idx % 2 === 1;
+                    doc.setFont("helvetica", isBold ? "bold" : "normal");
+
+                    // Naive approach: Text wrap per part (imperfect but works for short labels)
+                    // Better approach: Split by words, measure, flow.
+
+                    const words = part.split(' ');
+                    words.forEach((word, wIdx) => {
+                        const wordWithSpace = word + (wIdx < words.length - 1 ? " " : "");
+                        const wWidth = doc.getTextWidth(wordWithSpace);
+
+                        // Check wrapping relative to X start
+                        // If currentX + wWidth > x + maxWidth
+                        // But x is absolute left. MaxWidth is width of column.
+                        // Safe right boundary = x + maxWidth
+
+                        // NOTE: x passed to function is the start of *this text block*.
+                        // We need the absolute left margin of the cell to calculate wrapping properly.
+                        // Assuming x is valid start.
+
+                        // Simple wrap protection (assuming cell X starts around 23mm)
+                        // If we drift too far right (e.g. > 90mm), wrap.
+                        // Col width is 70mm. Margin left 23. Max X ~93.
+                        if (currentX > 90) {
+                             currentY += 4;
+                             currentX = 25; // Reset to approx left cell margin
+                        }
+
+                        doc.text(wordWithSpace, currentX, currentY);
+                        currentX += wWidth;
+                    });
+                });
+
+                doc.__lastLineY = currentY + 4.5; // Store next Y for parent loop
+            };
+
             const renderDescription = (text) => {
                 if (!text) return "";
                 return text.split('\n').map((line, i) => {
-                    const match = line.match(/^((?:Merk|Tipe|Ukuran [Rr]oll|Material)\s*:)\s*(.*)/);
-                    if (match) {
-                        return (
-                            <div key={i}>
-                                <span className="font-bold">{match[1]}</span> {match[2]}
-                            </div>
-                        );
+                    // 1. Check for Label: Value pattern at start of line
+                    // Matches any alphanumeric label followed by colon, e.g. "Biaya Angkut:", "Merk:"
+                    // Limit label length to avoid false positives on long sentences
+                    const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
+
+                    let content = [];
+                    let remainder = line;
+
+                    if (labelMatch) {
+                        const label = labelMatch[1];
+                        const value = labelMatch[2];
+                        content.push(<span key="label" className="font-bold">{label} </span>);
+                        remainder = value;
                     }
-                    return <div key={i}>{line}</div>;
+
+                    // 2. Parse Markdown Bold (*text*) in the remainder
+                    // We split by *
+                    const parts = remainder.split('*');
+                    parts.forEach((part, idx) => {
+                         // Even indices are normal, Odd indices are bold (assuming closed pairs)
+                         // Simple parser: *bold* -> part0 (normal), part1 (bold), part2 (normal)
+                         if (idx % 2 === 1) {
+                             content.push(<span key={idx} className="font-bold">{part}</span>);
+                         } else {
+                             content.push(<span key={idx}>{part}</span>);
+                         }
+                    });
+
+                    return <div key={i}>{content}</div>;
                 });
             };
 
@@ -623,41 +691,37 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                             const cellInnerWidth = width - 4; // 2mm padding each side
 
                             lines.forEach(line => {
-                                const match = line.match(/^((?:Merk|Tipe|Ukuran [Rr]oll|Material)\s*:)\s*(.*)/);
-                                if (match) {
+                                // 1. Check for Label: Value pattern at start of line
+                                const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
+
+                                let startX = x + 2;
+
+                                if (labelMatch) {
                                     // Label (Bold)
                                     doc.setFont("helvetica", "bold");
-                                    const label = match[1];
-                                    doc.text(label, x + 2, currentY);
+                                    const label = labelMatch[1] + " "; // Add space
+                                    doc.text(label, startX, currentY);
+                                    startX += doc.getTextWidth(label);
 
-                                    const labelWidth = doc.getTextWidth(label);
+                                    // Process Remainder (Value)
+                                    // Note: Simple rich text support for *bold* in value part is complex with wrapping.
+                                    // For now, we render the rest as normal text, but support *bold* if it doesn't wrap weirdly?
+                                    // To keep it safe: Render remainder normally, stripping * for now or simple parse?
+                                    // Let's support simple *bold* parsing even in value.
 
-                                    // Value (Normal)
-                                    doc.setFont("helvetica", "normal");
-                                    const value = match[2];
-
-                                    // Check if value needs wrapping
-                                    // Available width for value
-                                    const availableWidth = cellInnerWidth - labelWidth - 1; // 1mm spacing
-
-                                    if (availableWidth > 0) {
-                                        const valueLines = doc.splitTextToSize(value, availableWidth);
-                                        doc.text(valueLines, x + 2 + labelWidth + 1, currentY);
-                                        currentY += (valueLines.length * 4); // Line height
-                                    } else {
-                                        // Fallback if label is too long (rare)
-                                        currentY += 4;
-                                        doc.text(value, x + 2, currentY);
-                                        currentY += 4;
-                                    }
-
+                                    const value = labelMatch[2];
+                                    drawRichLine(doc, value, startX, currentY, cellInnerWidth - (startX - (x+2)));
                                 } else {
-                                    // Normal Line
-                                    doc.setFont("helvetica", "normal");
-                                    const wrappedLines = doc.splitTextToSize(line, cellInnerWidth);
-                                    doc.text(wrappedLines, x + 2, currentY);
-                                    currentY += (wrappedLines.length * 4);
+                                    // Normal Line (check for *bold*)
+                                    drawRichLine(doc, line, startX, currentY, cellInnerWidth);
                                 }
+
+                                // Estimate line height advancement (approximate, since drawRichLine handles single line logic mostly)
+                                // If wrapped, drawRichLine returns next Y?
+                                // Complex wrapping logic is hard to inject here perfectly.
+                                // Fallback: We advance fixed amount per "paragraph" line from source.
+                                // Refinement: drawRichLine needs to handle wrapping internally and return newY.
+                                currentY = doc.__lastLineY || (currentY + 5);
                             });
                         }
                     }
