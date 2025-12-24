@@ -122,7 +122,7 @@ Pembayaran:
             material: {
                 title: "Penawaran Material Geomembrane",
                 items: [
-                    { materialName: "Material Geomembrane HDPE", brand: "Geoprotec", type: "1.0 mm / 1.5 mm / 2.0 mm", rollSize: "8m x 50m", unit: "m2", qty: 1000, price: 45000 }
+                    { desc: "Material Geomembrane HDPE\nMerk: Geoprotec\nTipe: 1.0 mm / 1.5 mm / 2.0 mm\nUkuran roll: 8m x 50m", unit: "m2", qty: 1000, price: 45000 }
                 ],
                 terms: `• Harga locco Gudang PT. Multibangun Rekatama Patria di Bitung, Tangerang.
 • Harga Material untuk keperluan proyek [NAMA_PROYEK].
@@ -135,7 +135,7 @@ Pembayaran:
             install: {
                 title: "Penawaran Geomembrane + Pemasangan",
                 items: [
-                    { materialName: "Material Geomembrane HDPE", brand: "Geoprotec", type: "1.0 mm", rollSize: "8m x 50m", unit: "m2", qty: 1000, price: 45000 },
+                    { desc: "Material Geomembrane HDPE\nMerk: Geoprotec\nTipe: 1.0 mm\nUkuran roll: 8m x 50m", unit: "m2", qty: 1000, price: 45000 },
                     { desc: "Jasa Instalasi Geomembrane", unit: "m2", qty: 1000, price: 15000 },
                     { desc: "Biaya Mob-Demob & Akomodasi", unit: "Ls", qty: 1, price: 5000000 }
                 ],
@@ -439,25 +439,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             };
 
             const addMaterial = () => {
-                const newItem = { materialName: "Material Baru", brand: "", type: "", rollSize: "", unit: "m2", qty: 1, price: 0 };
+                const newItem = { desc: "Material Baru\nMerk: \nTipe: \nUkuran roll: ", unit: "m2", qty: 1, price: 0 };
                 setFormData({ ...formData, items: [...formData.items, newItem] });
-            };
-
-            const convertToText = (index) => {
-                const item = formData.items[index];
-                if (item.materialName === undefined) return;
-
-                const desc = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
-                const newItem = {
-                    desc,
-                    unit: item.unit,
-                    qty: item.qty,
-                    price: item.price
-                };
-
-                const newItems = [...formData.items];
-                newItems[index] = newItem;
-                setFormData({ ...formData, items: newItems });
             };
 
             const removeItem = (index) => {
@@ -1008,7 +991,9 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                                             <div>Tipe: {item.type}</div>
                                                                             <div>Ukuran roll: {item.rollSize}</div>
                                                                         </div>
-                                                                    ) : item.desc}
+                                                                    ) : (
+                                                                        <div className="whitespace-pre-wrap">{item.desc}</div>
+                                                                    )}
                                                                 </td>
                                                                 <td className="p-2 text-center border border-black align-top">{item.qty} {item.unit}</td>
                                                                 <td className="p-2 text-center border border-black align-top">{formatRupiah(item.price)}</td>
