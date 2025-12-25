@@ -587,6 +587,27 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 setFormData({ ...formData, items: newItems });
             };
 
+            const handleBold = (index) => {
+                const textarea = document.getElementById(`item-desc-${index}`);
+                if (!textarea) return;
+
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+
+                if (start === end) return; // No selection
+
+                const newText = text.substring(0, start) + "*" + text.substring(start, end) + "*" + text.substring(end);
+
+                updateItem(index, 'desc', newText);
+
+                // Restore selection (slightly adjusted)
+                setTimeout(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, end + 1);
+                }, 0);
+            };
+
             // Helper for drawing rich text (Markdown-style *bold*) in PDF
             const drawRichLine = (doc, text, x, y, maxWidth) => {
                 const parts = text.split('*');
@@ -1141,7 +1162,13 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <textarea className="w-full bg-transparent outline-none resize-none h-24" value={item.desc} onChange={e => updateItem(idx, 'desc', e.target.value)}></textarea>
+                                                            <div className="relative">
+                                                                <div className="flex justify-end mb-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0 -top-6">
+                                                                    <button onClick={() => handleBold(idx)} className="bg-gray-200 hover:bg-gray-300 px-2 py-0.5 rounded text-xs font-bold" title="Bold Selection">B</button>
+                                                                </div>
+                                                                <textarea id={`item-desc-${idx}`} className="w-full bg-transparent outline-none resize-none h-24 group" value={item.desc} onChange={e => updateItem(idx, 'desc', e.target.value)}></textarea>
+                                                                <div className="text-[10px] text-gray-400 mt-1">Gunakan *text* untuk bold</div>
+                                                            </div>
                                                         )}
                                                     </td>
                                                     <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-center" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} /></td>
