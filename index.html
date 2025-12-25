@@ -357,6 +357,102 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             );
         };
 
+        const SavedQuotationsModal = ({ isOpen, onClose, savedQuotations, onRetrieve, onDelete }) => {
+            if (!isOpen) return null;
+
+            const [searchTerm, setSearchTerm] = useState("");
+
+            const filteredQuotations = savedQuotations.filter(q =>
+                (q.noSurat || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (q.clientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (q.projectName || "").toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col">
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <div className="w-full max-w-lg">
+                                <input
+                                    type="text"
+                                    placeholder="Search ID, Project, Recipient..."
+                                    className="w-full border p-2 rounded-lg"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black">X</button>
+                        </div>
+
+                        <div className="flex-1 p-6 bg-gray-50 overflow-auto">
+                            <div className="bg-white border rounded-lg overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
+                                        <tr>
+                                            <th className="p-4 text-left">Letter Number</th>
+                                            <th className="p-4 text-left">Project & Type</th>
+                                            <th className="p-4 text-left">Recipient</th>
+                                            <th className="p-4 text-left">Subject</th>
+                                            <th className="p-4 text-left">Owner / Date</th>
+                                            <th className="p-4 text-right">File</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {filteredQuotations.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="6" className="p-8 text-center text-gray-400">No saved quotations found.</td>
+                                            </tr>
+                                        ) : (
+                                            filteredQuotations.map((q) => (
+                                                <tr key={q.id} className="hover:bg-gray-50">
+                                                    <td className="p-4">
+                                                        <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded font-mono font-bold text-xs">
+                                                            {q.noSurat}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="font-bold text-gray-800">{q.projectName}</div>
+                                                        <div className="text-xs text-blue-500 font-bold mt-1 uppercase">{q.type}</div>
+                                                    </td>
+                                                    <td className="p-4 font-medium text-gray-700">
+                                                        {q.clientName}
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="font-bold">Penawaran Harga</div>
+                                                        <div className="text-xs text-gray-400">No notes</div>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="font-bold">{q.owner}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {new Date(q.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 text-right flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => onRetrieve(q)}
+                                                            className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-xs font-bold flex items-center gap-1"
+                                                        >
+                                                            <Icons.FileText size={12} /> Retrieve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => onDelete(q.id)}
+                                                            className="text-red-400 hover:text-red-600 p-1"
+                                                        >
+                                                            <Icons.Trash2 size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             // STATE
             const [currentUser, setCurrentUser] = useState(null);
@@ -366,6 +462,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             const [tab, setTab] = useState('multiblock');
             const [showSettings, setShowSettings] = useState(false);
             const [showPreview, setShowPreview] = useState(false);
+            const [showSaved, setShowSaved] = useState(false);
+            const [savedQuotations, setSavedQuotations] = useState([]);
             const [pdfUrl, setPdfUrl] = useState(null);
 
             // Form Data
@@ -385,12 +483,54 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             useEffect(() => {
                 const savedUsers = localStorage.getItem('mb_users_v2');
                 const savedAssets = localStorage.getItem('mb_assets_v2');
+                const savedQuots = localStorage.getItem('mb_saved_quotations');
                 
                 if (savedUsers) setUsers(JSON.parse(savedUsers));
                 if (savedAssets) setAssets(JSON.parse(savedAssets));
+                if (savedQuots) setSavedQuotations(JSON.parse(savedQuots));
 
                 resetFormToTab('multiblock');
             }, []);
+
+            const handleSaveQuotation = () => {
+                if (!formData.noSurat) {
+                    alert("Nomor Surat harus diisi!");
+                    return;
+                }
+
+                const newQuotation = {
+                    id: Date.now(),
+                    savedAt: new Date().toISOString(),
+                    owner: currentUser ? currentUser.name : "Unknown",
+                    type: tab === 'multiblock' ? 'RW' : (tab === 'material' ? 'MAT' : 'MAT+INS'),
+                    noSurat: formData.noSurat,
+                    clientName: formData.clientName,
+                    projectName: formData.projectName,
+                    formData: { ...formData },
+                    tab: tab
+                };
+
+                const updatedList = [newQuotation, ...savedQuotations];
+                setSavedQuotations(updatedList);
+                localStorage.setItem('mb_saved_quotations', JSON.stringify(updatedList));
+                alert("Penawaran berhasil disimpan!");
+            };
+
+            const handleRetrieveQuotation = (q) => {
+                if (confirm(`Load penawaran ${q.noSurat}? Data saat ini akan tertimpa.`)) {
+                    setTab(q.tab || 'multiblock');
+                    setFormData(q.formData);
+                    setShowSaved(false);
+                }
+            };
+
+            const handleDeleteQuotation = (id) => {
+                if (confirm("Hapus penyimpanan ini?")) {
+                    const updatedList = savedQuotations.filter(q => q.id !== id);
+                    setSavedQuotations(updatedList);
+                    localStorage.setItem('mb_saved_quotations', JSON.stringify(updatedList));
+                }
+            };
 
             // Save Assets when changed
             useEffect(() => {
@@ -895,6 +1035,9 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                             <div className="flex items-center gap-2">
                                 <Icons.FileText className="text-blue-600" />
                                 <h1 className="font-bold text-xl hidden sm:block">Multibangun Offer System v2.1</h1>
+                                <button onClick={() => setShowSaved(true)} className="ml-4 flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-blue-200">
+                                    <Icons.FileText size={14}/> Data Tersimpan
+                                </button>
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="text-right hidden sm:block">
@@ -1025,9 +1168,14 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                 <textarea className="w-full border p-2 rounded h-64 text-sm font-mono leading-relaxed" value={formData.terms} onChange={e => setFormData({...formData, terms: e.target.value})} />
                             </div>
 
-                            <button onClick={handlePreview} className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">
-                                <Icons.Printer size={20} /> PREVIEW PDF
-                            </button>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button onClick={handleSaveQuotation} className="w-full bg-white border-2 border-blue-600 text-blue-600 py-4 rounded-lg font-bold shadow-sm hover:bg-blue-50 flex items-center justify-center gap-2">
+                                    <Icons.FileText size={20} /> SIMPAN
+                                </button>
+                                <button onClick={handlePreview} className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">
+                                    <Icons.Printer size={20} /> PREVIEW PDF
+                                </button>
+                            </div>
                         </div>
 
                         {/* RIGHT: LIVE PREVIEW (MULTI-PAGE SIMULATION) */}
@@ -1169,6 +1317,14 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                         setUsers={setUsers}
                         assets={assets}
                         setAssets={setAssets}
+                    />
+
+                    <SavedQuotationsModal
+                        isOpen={showSaved}
+                        onClose={() => setShowSaved(false)}
+                        savedQuotations={savedQuotations}
+                        onRetrieve={handleRetrieveQuotation}
+                        onDelete={handleDeleteQuotation}
                     />
 
                     <PreviewModal
