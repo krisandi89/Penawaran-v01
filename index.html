@@ -735,12 +735,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 
                 // Kiri: Nomor
                 doc.text(`No: ${formData.noSurat}`, marginLeft, yPos);
-                yPos += 5;
+                yPos += 10;
 
-                // Hal
-                doc.text("Hal: Penawaran Harga", marginLeft, yPos);
-                yPos += 8;
-                
                 doc.text("Kepada Yth:", marginLeft, yPos);
                 yPos += 5;
                 doc.setFont("helvetica", "bold");
@@ -900,7 +896,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 // 4. SYARAT & KONDISI
                 doc.setFontSize(10);
                 doc.setFont("helvetica", "bold");
-                doc.text("Kondisi Penawaran", marginLeft, yPos);
+                doc.text("Kondisi Penawaran:", marginLeft, yPos);
                 yPos += 5;
                 doc.setFont("helvetica", "normal");
 
@@ -1232,7 +1228,6 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                     <div className="flex justify-between mb-4">
                                                         <div>
                                                             <div>No: {formData.noSurat}</div>
-                                                            <div>Hal: Penawaran Harga</div>
                                                             <div className="mt-4">
                                                                 <div>Kepada Yth:</div>
                                                                 <div className="font-bold text-lg uppercase">{formData.clientName || "[Nama Klien]"}</div>
@@ -1300,7 +1295,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                             {pageData.isLastPage && (
                                                 <>
                                                     <div className="text-[10pt] whitespace-pre-wrap font-sans mb-4 leading-snug">
-                                                        <strong className="block text-[10pt] font-bold mb-2">Kondisi Penawaran</strong>
+                                                                <strong className="block text-[10pt] font-bold mb-2">Kondisi Penawaran:</strong>
                                                         {(() => {
                                                             let t = formData.terms;
                                                             t = t.replace(/\[NAMA_PROYEK\]/g, formData.projectName || "....................");
