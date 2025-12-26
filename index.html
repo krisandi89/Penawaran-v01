@@ -809,9 +809,9 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                     },
                     columnStyles: {
                         0: { cellWidth: 70, halign: 'left' },
-                        1: { cellWidth: 35, halign: 'center' },
-                        2: { cellWidth: 40, halign: 'center' },
-                        3: { cellWidth: 40, halign: 'center' }
+                        1: { cellWidth: 35, halign: 'center', valign: 'middle' },
+                        2: { cellWidth: 40, halign: 'center', valign: 'middle' },
+                        3: { cellWidth: 40, halign: 'center', valign: 'middle' }
                     },
                     margin: { left: marginLeft, right: marginRight },
                     // Logic to add background if table splits page
@@ -1281,9 +1281,9 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                                         <div className="whitespace-pre-wrap">{renderDescription(item.desc)}</div>
                                                                     )}
                                                                 </td>
-                                                                <td className="p-2 text-center border border-black align-top">{item.qty} {item.unit}</td>
-                                                                <td className="p-2 text-center border border-black align-top">{formatRupiah(item.price)}</td>
-                                                                <td className="p-2 text-center border border-black align-top">{formatRupiah(item.price * item.qty)}</td>
+                                                                <td className="p-2 text-center border border-black align-middle">{item.qty} {item.unit}</td>
+                                                                <td className="p-2 text-center border border-black align-middle">{formatRupiah(item.price)}</td>
+                                                                <td className="p-2 text-center border border-black align-middle">{formatRupiah(item.price * item.qty)}</td>
                                                             </tr>
                                                         ))}
                                                         {pageData.isLastPage && (
