@@ -1085,29 +1085,69 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
             // HTML VISUALIZATION LOGIC
             const getPreviewPages = () => {
-                // This is a rough simulation of pagination for the HTML preview.
-                // It's not 100% accurate to the PDF but gives a visual sense of page breaks.
+                const pages = [];
+                const items = formData.items;
 
-                const ITEMS_PER_PAGE_1 = 6; // Rough estimate including header/intro
+                // Config
+                const ITEMS_FIRST_PAGE = 6; // Space for Header + Intro
+                const ITEMS_PER_PAGE = 12;  // Full page of items
+                const TERMS_SPACE_ITEMS = 6; // Equivalent items taken up by Terms/Sig (approx half page)
 
-                if (formData.items.length <= ITEMS_PER_PAGE_1) {
-                    // Fits on Page 1
-                    return [{
-                        items: formData.items,
-                        isLastPage: true,
-                        startIdx: 0,
-                        hasHeader: true
-                    }];
-                } else {
-                    // Split into 2 Pages (Visual Only)
-                    const page1Items = formData.items.slice(0, ITEMS_PER_PAGE_1);
-                    const page2Items = formData.items.slice(ITEMS_PER_PAGE_1);
+                let currentIdx = 0;
+                let pageNum = 1;
 
-                    return [
-                        { items: page1Items, isLastPage: false, startIdx: 0, hasHeader: true },
-                        { items: page2Items, isLastPage: true, startIdx: ITEMS_PER_PAGE_1, hasHeader: false }
-                    ];
+                // Handle edge case: 0 items
+                if (items.length === 0) {
+                    return [{ items: [], hasHeader: true, isLastPage: true }];
                 }
+
+                while (currentIdx < items.length) {
+                    let limit = (pageNum === 1) ? ITEMS_FIRST_PAGE : ITEMS_PER_PAGE;
+
+                    // Grab items for this page
+                    let chunk = items.slice(currentIdx, currentIdx + limit);
+
+                    // Check if this is the last batch of items
+                    let isLastItemPage = (currentIdx + chunk.length) === items.length;
+
+                    let pageObj = {
+                        items: chunk,
+                        hasHeader: pageNum === 1,
+                        isLastPage: false
+                    };
+
+                    if (isLastItemPage) {
+                        // Check if Terms/Signature fit on this page
+                        // We check if remaining capacity on this page is enough for Terms
+                        // Capacity = limit. Used = chunk.length. Remaining = limit - chunk.length.
+                        // We need TERMS_SPACE_ITEMS space.
+
+                        if ((limit - chunk.length) < TERMS_SPACE_ITEMS) {
+                            // Not enough space for terms.
+                            // Render items on this page, but push Terms to next page.
+                            pages.push(pageObj);
+
+                            // Add extra page for Terms
+                            pages.push({
+                                items: [],
+                                hasHeader: false,
+                                isLastPage: true
+                            });
+                        } else {
+                            // Terms fit here.
+                            pageObj.isLastPage = true;
+                            pages.push(pageObj);
+                        }
+                        break; // All done
+                    } else {
+                        // Not last items. Push and continue.
+                        pages.push(pageObj);
+                        currentIdx += chunk.length;
+                        pageNum++;
+                    }
+                }
+
+                return pages;
             };
 
             // RENDER LOGIC
