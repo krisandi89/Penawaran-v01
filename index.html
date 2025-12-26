@@ -473,11 +473,16 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 clientName: "",
                 clientAddress: "",
                 clientUp: "",
+                clientPhone: "",
+                clientEmail: "",
                 projectName: "",
                 projectLocation: "",
                 items: [],
                 terms: ""
             });
+
+            const [showClientPhone, setShowClientPhone] = useState(false);
+            const [showClientEmail, setShowClientEmail] = useState(false);
 
             // LOAD SAVED DATA
             useEffect(() => {
@@ -519,7 +524,15 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             const handleRetrieveQuotation = (q) => {
                 if (confirm(`Load penawaran ${q.noSurat}? Data saat ini akan tertimpa.`)) {
                     setTab(q.tab || 'multiblock');
-                    setFormData(q.formData);
+                    const loadedData = q.formData;
+                    setFormData(loadedData);
+
+                    if (loadedData.clientPhone) setShowClientPhone(true);
+                    else setShowClientPhone(false);
+
+                    if (loadedData.clientEmail) setShowClientEmail(true);
+                    else setShowClientEmail(false);
+
                     setShowSaved(false);
                 }
             };
@@ -748,7 +761,18 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 yPos += (clientAddrLines.length * 5) + 3;
                 
                 doc.text(`Up: ${formData.clientUp}`, marginLeft, yPos);
-                yPos += 10;
+                yPos += 5;
+
+                if (formData.clientPhone) {
+                    doc.text(`No. Telpon: ${formData.clientPhone}`, marginLeft, yPos);
+                    yPos += 5;
+                }
+                if (formData.clientEmail) {
+                    doc.text(`Email: ${formData.clientEmail}`, marginLeft, yPos);
+                    yPos += 5;
+                }
+
+                yPos += 5;
 
                 // Pembuka
                 doc.text("Dengan hormat,", marginLeft, yPos);
@@ -1096,6 +1120,40 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Nomor Surat</label>
                                     <input type="text" className="w-full border p-2 rounded" value={formData.noSurat} onChange={e => setFormData({...formData, noSurat: e.target.value})} />
                                 </div>
+
+                                {/* Phone & Email Toggles */}
+                                <div className="col-span-2 flex flex-wrap gap-2">
+                                    {!showClientPhone && (
+                                        <button onClick={() => setShowClientPhone(true)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1">
+                                            <Icons.Plus size={12}/> Tambah No. Telpon
+                                        </button>
+                                    )}
+                                    {!showClientEmail && (
+                                        <button onClick={() => setShowClientEmail(true)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1">
+                                            <Icons.Plus size={12}/> Tambah Email
+                                        </button>
+                                    )}
+                                </div>
+
+                                {showClientPhone && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">No. Telpon</label>
+                                        <div className="flex gap-1">
+                                            <input type="text" className="w-full border p-2 rounded" placeholder="081..." value={formData.clientPhone || ""} onChange={e => setFormData({...formData, clientPhone: e.target.value})} />
+                                            <button onClick={() => { setShowClientPhone(false); setFormData({...formData, clientPhone: ""}); }} className="text-red-400 hover:text-red-600 p-2"><Icons.Trash2 size={14}/></button>
+                                        </div>
+                                    </div>
+                                )}
+                                {showClientEmail && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Email</label>
+                                        <div className="flex gap-1">
+                                            <input type="text" className="w-full border p-2 rounded" placeholder="email@example.com" value={formData.clientEmail || ""} onChange={e => setFormData({...formData, clientEmail: e.target.value})} />
+                                            <button onClick={() => { setShowClientEmail(false); setFormData({...formData, clientEmail: ""}); }} className="text-red-400 hover:text-red-600 p-2"><Icons.Trash2 size={14}/></button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="col-span-2">
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Alamat Klien</label>
                                     <textarea className="w-full border p-2 rounded h-20" placeholder="Jl. Raya..." value={formData.clientAddress} onChange={e => setFormData({...formData, clientAddress: e.target.value})} />
@@ -1233,6 +1291,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                                 <div className="font-bold text-lg uppercase">{formData.clientName || "[Nama Klien]"}</div>
                                                                 <div className="w-64">{formData.clientAddress || "[Alamat Klien]"}</div>
                                                                 <div className="mt-2">Up: {formData.clientUp}</div>
+                                                                {formData.clientPhone && <div>No. Telpon: {formData.clientPhone}</div>}
+                                                                {formData.clientEmail && <div>Email: {formData.clientEmail}</div>}
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
