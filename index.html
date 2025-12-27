@@ -1088,63 +1088,86 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 const pages = [];
                 const items = formData.items;
 
-                // Config
-                const ITEMS_FIRST_PAGE = 6; // Space for Header + Intro
-                const ITEMS_PER_PAGE = 12;  // Full page of items
-                const TERMS_SPACE_ITEMS = 6; // Equivalent items taken up by Terms/Sig (approx half page)
+                // Constants (mm)
+                const CONTENT_HEIGHT = 219.5; // 297mm - 42.5mm (top) - 35mm (bottom)
+                const HEADER_HEIGHT_P1 = 65;  // Space for Header Info (No, Date, Client, Intro...)
+                const TABLE_HEADER_HEIGHT = 10;
+                const ROW_PAD = 4; // mm padding vertical total
+                const LINE_HEIGHT = 4.5; // mm per line
+                const FOOTER_SIG_HEIGHT = 60; // Closing text + Sig Image + Name/Title
 
-                let currentIdx = 0;
-                let pageNum = 1;
+                // Calculate Footer Height (Terms + Sig)
+                const getFooterHeight = () => {
+                     let text = formData.terms || "";
+                     text = text.replace(/\[NAMA_PROYEK\]/g, formData.projectName || "....................");
+                     const lines = text.split('\n').length;
+                     const wrapBonus = Math.ceil(text.length / 95); // Rough wrap est
+                     const termHeight = (Math.max(lines, wrapBonus) * LINE_HEIGHT) + 12; // + Header "Kondisi..."
+                     return termHeight + FOOTER_SIG_HEIGHT;
+                };
 
-                // Handle edge case: 0 items
-                if (items.length === 0) {
-                    return [{ items: [], hasHeader: true, isLastPage: true }];
+                const FOOTER_HEIGHT = getFooterHeight();
+
+                let currentPage = {
+                    items: [],
+                    hasHeader: true,
+                    isLastPage: false,
+                    currentY: HEADER_HEIGHT_P1 + TABLE_HEADER_HEIGHT
+                };
+
+                items.forEach((item, index) => {
+                    // Calculate Item Height
+                    let descText = "";
+                    if (item.materialName !== undefined) {
+                        descText = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
+                    } else {
+                        descText = item.desc || "";
+                    }
+
+                    const lines = descText.split('\n').length;
+                    const wrapBonus = Math.ceil(descText.length / 60); // Column width ~70mm -> ~50-60 chars
+                    const effectiveLines = Math.max(lines, wrapBonus);
+
+                    const itemHeight = (effectiveLines * LINE_HEIGHT) + ROW_PAD + 4; // +4 for internal cell padding
+
+                    // Check if fits
+                    if (currentPage.currentY + itemHeight > CONTENT_HEIGHT) {
+                        // Push current
+                        pages.push(currentPage);
+
+                        // Start new
+                        currentPage = {
+                            items: [],
+                            hasHeader: false,
+                            isLastPage: false,
+                            currentY: TABLE_HEADER_HEIGHT // Table Header only
+                        };
+                    }
+
+                    currentPage.items.push(item);
+                    currentPage.currentY += itemHeight;
+                });
+
+                // Check Footer
+                if (currentPage.currentY + FOOTER_HEIGHT > CONTENT_HEIGHT) {
+                    // Push current
+                    pages.push(currentPage);
+
+                    // New page for Footer
+                    pages.push({
+                        items: [],
+                        hasHeader: false,
+                        isLastPage: true,
+                        currentY: 0
+                    });
+                } else {
+                    currentPage.isLastPage = true;
+                    pages.push(currentPage);
                 }
 
-                while (currentIdx < items.length) {
-                    let limit = (pageNum === 1) ? ITEMS_FIRST_PAGE : ITEMS_PER_PAGE;
-
-                    // Grab items for this page
-                    let chunk = items.slice(currentIdx, currentIdx + limit);
-
-                    // Check if this is the last batch of items
-                    let isLastItemPage = (currentIdx + chunk.length) === items.length;
-
-                    let pageObj = {
-                        items: chunk,
-                        hasHeader: pageNum === 1,
-                        isLastPage: false
-                    };
-
-                    if (isLastItemPage) {
-                        // Check if Terms/Signature fit on this page
-                        // We check if remaining capacity on this page is enough for Terms
-                        // Capacity = limit. Used = chunk.length. Remaining = limit - chunk.length.
-                        // We need TERMS_SPACE_ITEMS space.
-
-                        if ((limit - chunk.length) < TERMS_SPACE_ITEMS) {
-                            // Not enough space for terms.
-                            // Render items on this page, but push Terms to next page.
-                            pages.push(pageObj);
-
-                            // Add extra page for Terms
-                            pages.push({
-                                items: [],
-                                hasHeader: false,
-                                isLastPage: true
-                            });
-                        } else {
-                            // Terms fit here.
-                            pageObj.isLastPage = true;
-                            pages.push(pageObj);
-                        }
-                        break; // All done
-                    } else {
-                        // Not last items. Push and continue.
-                        pages.push(pageObj);
-                        currentIdx += chunk.length;
-                        pageNum++;
-                    }
+                // Edge case handling if no items exist (show at least one page)
+                if (pages.length === 0) {
+                     pages.push({ items: [], hasHeader: true, isLastPage: true });
                 }
 
                 return pages;

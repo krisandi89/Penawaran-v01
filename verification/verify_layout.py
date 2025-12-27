@@ -1,43 +1,54 @@
-import asyncio
-from playwright.async_api import async_playwright
-import http.server
-import socketserver
-import threading
-import os
 
-PORT = 8000
+from playwright.sync_api import sync_playwright, expect
+import re
 
-def start_server():
-    handler = http.server.SimpleHTTPRequestHandler
-    with socketserver.TCPServer(("", PORT), handler) as httpd:
-        print(f"Serving at port {PORT}")
-        httpd.serve_forever()
+def verify_layout():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-async def run():
-    # Start server in a separate thread
-    server_thread = threading.Thread(target=start_server)
-    server_thread.daemon = True
-    server_thread.start()
+        # 1. Navigate to app
+        page.goto("http://localhost:8000")
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.goto(f"http://localhost:{PORT}/index.html")
+        # 2. Login
+        page.get_by_role("button", name="Ir. Nuruzzaman").click()
+        page.get_by_placeholder("PIN").fill("1234")
+        page.get_by_role("button", name="MASUK").click()
 
-        # Login first
-        await page.click('text=Ir. Nuruzzaman')
-        await page.fill('input[type="password"]', '1234')
-        await page.click('button:has-text("MASUK")')
+        # 3. Handle Dialogs (Confirmations)
+        page.on("dialog", lambda dialog: dialog.accept())
 
-        # Wait for preview to load
-        await page.wait_for_selector('.preview-paper')
+        # 4. Switch Tab to 'Penawaran Material'
+        # This triggers a confirm dialog which we accept above
+        page.get_by_role("button", name="Penawaran Material", exact=True).click()
 
-        # Take screenshot of the preview paper
-        preview = page.locator('.preview-paper').first
-        await preview.screenshot(path="verification/preview_before.png")
+        # Wait for tab switch - check class contains 'text-blue-600'
+        # We use a regex to match partial class
+        expect(page.get_by_role("button", name="Penawaran Material", exact=True)).to_have_class(re.compile(r"text-blue-600"))
 
-        print("Screenshot taken: verification/preview_before.png")
-        await browser.close()
+        # 5. Verify Preview
+        # The default material tab has 1 item.
+        # Verify preview shows only 1 page.
+
+        # Wait for preview to render
+        page.wait_for_selector(".preview-paper")
+
+        # Allow time for React render loop
+        page.wait_for_timeout(1000)
+
+        papers = page.locator(".preview-paper")
+        count = papers.count()
+        print(f"Number of pages: {count}")
+
+        # Take screenshot
+        page.screenshot(path="verification/layout_fix.png", full_page=True)
+
+        if count == 1:
+            print("SUCCESS: Content fits on 1 page.")
+        else:
+            print("FAILURE: Content split into multiple pages.")
+
+        browser.close()
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    verify_layout()
