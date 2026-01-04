@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multibangun Offer System v2.1</title>
+    <title>Multibangun Offer System v3.0</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -20,58 +20,30 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* Mengatur Font Utama ke Arial */
-        body { 
-            font-family: Arial, Helvetica, sans-serif; 
-            background-color: #f3f4f6; 
+        /* Font Arial 11pt untuk semua elemen */
+        body, input, textarea, select, button, table, th, td, div, span, p, label { 
+            font-family: Arial, Helvetica, sans-serif !important; 
+            font-size: 11pt;
         }
         
-        .preview-paper {
-            background: white;
-            width: 210mm;
-            min-height: 297mm; /* Fixed Height for A4 simulation */
-            padding: 0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            color: #000;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 2rem;
+        body {
+            background-color: #f3f4f6; 
         }
 
-        /* Area Teks di dalam kertas (Safe Zone) */
-        .paper-content {
-            position: relative;
-            z-index: 10;
-            padding-top: 42.5mm;    /* Margin Atas 4.25cm */
-            padding-bottom: 35mm;   /* Margin Bawah 3.5cm */
-            padding-left: 23mm;     /* Margin Kiri 2.3cm */
-            padding-right: 23mm;    /* Margin Kanan 2.3cm */
-            font-size: 11pt;        /* Ukuran Font 11 */
-            line-height: 1.4;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .paper-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 297mm;
-            z-index: 0;
-        }
-
-        @media screen and (max-width: 768px) {
-            .preview-paper { width: 100%; height: auto; min-height: 297mm; }
-        }
+        /* Override Tailwind text sizes to maintain 11pt base */
+        .text-xs { font-size: 9pt !important; }
+        .text-sm { font-size: 10pt !important; }
+        .text-base { font-size: 11pt !important; }
+        .text-lg { font-size: 12pt !important; }
+        .text-xl { font-size: 14pt !important; }
+        .text-2xl { font-size: 16pt !important; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
         // --- ICONS ---
         const Icon = ({ path, size = 20, className = "" }) => (
@@ -83,29 +55,16 @@
         const Icons = {
             FileText: (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>} />,
             Settings: (props) => <Icon {...props} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />,
-            LogOut: (props) => <Icon {...props} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>} />,
             Printer: (props) => <Icon {...props} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>} />,
             Plus: (props) => <Icon {...props} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />,
             Trash2: (props) => <Icon {...props} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />,
             Edit: (props) => <Icon {...props} path={<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>} />
         };
 
-        // --- DATA DEFAULT ---
-
-        const USERS_DEFAULT = [
-            { id: 1, name: "Ir. Nuruzzaman", title: "Technical & Marketing Manager", pin: "1234", phone: "0812-3456-7890" },
-            { id: 2, name: "Ir. Krisandi Saptyanto", title: "Design & Project Manager", pin: "1234", phone: "0812-9876-5432" },
-            { id: 3, name: "Admin Penawaran", title: "Admin Staff", pin: "1234", phone: "0812-1111-2222" },
-            { id: 4, name: "User 4", title: "Marketing", pin: "1234", phone: "0812-3333-4444" },
-            { id: 5, name: "User 5", title: "Marketing", pin: "1234", phone: "0812-5555-6666" }
-        ];
-
-        const TEMPLATES = {
-            multiblock: {
-                title: "MULTIBlock Retaining Wall System",
-                items: [
-                    { desc: "Material + Pekerjaan Pemasangan: MULTIblock Retaining Wall System", unit: "m2", qty: 450, price: 2400000 }
-                ],
+        // --- TEMPLATE SYARAT & KONDISI ---
+        const TERMS_TEMPLATES = {
+            retaining: {
+                label: "Retaining Wall",
                 terms: `- Harga franco lokasi proyek (sesuai input di atas).
 - Harga belum termasuk PPN 11%.
 - Harga tidak termasuk persiapan lahan lokasi, perbaikan tanah pondasi.
@@ -119,10 +78,7 @@ Pembayaran:
 - Penawaran berlaku 14 hari.`
             },
             material: {
-                title: "Penawaran Material Geomembrane",
-                items: [
-                    { desc: "Material Geomembrane HDPE\nMerk: Geoprotec\nTipe: 1.0 mm / 1.5 mm / 2.0 mm\nUkuran roll: 8m x 50m", unit: "m2", qty: 1000, price: 45000 }
-                ],
+                label: "Material",
                 terms: `• Harga locco Gudang PT. Multibangun Rekatama Patria di Bitung, Tangerang.
 • Harga Material untuk keperluan proyek [NAMA_PROYEK].
 • Material Ready Stock.
@@ -132,12 +88,7 @@ Pembayaran:
 • Penawaran harga ini berlaku sampai dengan tanggal [TANGGAL_BERLAKU] 2026.`
             },
             install: {
-                title: "Penawaran Geomembrane + Pemasangan",
-                items: [
-                    { desc: "Material Geomembrane HDPE\nMerk: Geoprotec\nTipe: 1.0 mm\nUkuran roll: 8m x 50m", unit: "m2", qty: 1000, price: 45000 },
-                    { desc: "Jasa Instalasi Geomembrane", unit: "m2", qty: 1000, price: 15000 },
-                    { desc: "Biaya Mob-Demob & Akomodasi", unit: "Ls", qty: 1, price: 5000000 }
-                ],
+                label: "Material + Instalasi",
                 terms: `• Harga Material Locco Gudang Multibangun di Bitung, Tangerang.
 • Harga Material dan Instalasi belum termasuk PPN 11%.
 • Harga Instalasi tidak termasuk genset 10 kVA & dewatering pump.
@@ -158,6 +109,16 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             }
         };
 
+        // --- DEFAULT SENDER PROFILE ---
+        const DEFAULT_PROFILE = {
+            name: "",
+            title: "",
+            phone: "",
+            signature: null
+        };
+
+        // --- COMPONENTS ---
+
         const PreviewModal = ({ isOpen, onClose, pdfUrl }) => {
             if (!isOpen) return null;
             return (
@@ -165,7 +126,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                     <div className="bg-white rounded-lg shadow-xl w-full h-full max-w-5xl flex flex-col">
                         <div className="flex justify-between items-center p-4 border-b">
                             <h2 className="text-xl font-bold">Preview PDF (Final Output)</h2>
-                            <button onClick={onClose} className="text-gray-500 hover:text-black">X</button>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black text-2xl">&times;</button>
                         </div>
                         <div className="flex-1 bg-gray-100 p-4">
                             <iframe src={pdfUrl} className="w-full h-full border rounded shadow" title="PDF Preview"></iframe>
@@ -175,68 +136,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             );
         };
 
-        // --- COMPONENTS ---
-
-        const LoginScreen = ({ users, onLogin }) => {
-            const [selectedUser, setSelectedUser] = useState(null);
-            const [pin, setPin] = useState("");
-            const [error, setError] = useState("");
-
-            const handleLogin = () => {
-                if (pin === selectedUser.pin) {
-                    onLogin(selectedUser);
-                } else {
-                    setError("PIN Salah!");
-                }
-            };
-
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-800 font-arial">
-                    <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
-                        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Login Multibangun</h2>
-                        {!selectedUser ? (
-                            <div className="grid grid-cols-1 gap-3">
-                                {users.map(u => (
-                                    <button key={u.id} 
-                                        onClick={() => setSelectedUser(u)}
-                                        className="flex items-center p-4 border rounded hover:bg-blue-50 transition text-left"
-                                    >
-                                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mr-4">
-                                            {u.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold">{u.name}</div>
-                                            <div className="text-xs text-gray-500">{u.title}</div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : (
-                            <div>
-                                <div className="mb-4 text-center">
-                                    <span className="font-bold text-lg">{selectedUser.name}</span>
-                                    <button onClick={() => { setSelectedUser(null); setPin(""); setError(""); }} className="block mx-auto text-sm text-blue-500 hover:underline">Ganti User</button>
-                                </div>
-                                <input 
-                                    type="password" 
-                                    className="w-full p-3 border rounded mb-2 text-center text-2xl tracking-widest"
-                                    placeholder="PIN"
-                                    value={pin}
-                                    onChange={(e) => setPin(e.target.value)}
-                                    maxLength={4}
-                                />
-                                {error && <p className="text-red-500 text-sm text-center mb-2">{error}</p>}
-                                <button onClick={handleLogin} className="w-full bg-blue-600 text-white p-3 rounded font-bold hover:bg-blue-700">
-                                    MASUK
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        const SettingsModal = ({ isOpen, onClose, currentUser, setCurrentUser, users, setUsers, setAssets, assets }) => {
+        const SettingsModal = ({ isOpen, onClose, senderProfile, setSenderProfile, assets, setAssets }) => {
             if (!isOpen) return null;
 
             const handleImageUpload = (e, key) => {
@@ -250,20 +150,18 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                     } else if (key === 'background2') {
                         setAssets(prev => ({ ...prev, background2: reader.result }));
                     } else if (key === 'signature') {
-                        updateUserField('signature', reader.result);
+                        const updated = { ...senderProfile, signature: reader.result };
+                        setSenderProfile(updated);
+                        localStorage.setItem('mb_sender_profile', JSON.stringify(updated));
                     }
                 };
                 reader.readAsDataURL(file);
             };
 
-            const updateUserField = (field, value) => {
-                const updatedUser = { ...currentUser, [field]: value };
-                setCurrentUser(updatedUser);
-
-                // Update in global users list
-                const newUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
-                setUsers(newUsers);
-                localStorage.setItem('mb_users_v2', JSON.stringify(newUsers));
+            const updateProfile = (field, value) => {
+                const updated = { ...senderProfile, [field]: value };
+                setSenderProfile(updated);
+                localStorage.setItem('mb_sender_profile', JSON.stringify(updated));
             };
 
             return (
@@ -271,20 +169,20 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold">Pengaturan</h2>
-                            <button onClick={onClose} className="text-gray-500 hover:text-black">X</button>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black text-2xl">&times;</button>
                         </div>
 
-                        {/* USER PROFILE */}
+                        {/* SENDER PROFILE */}
                         <div className="mb-6 border-b pb-6">
-                            <h3 className="font-bold mb-4 text-blue-800">1. Profil Pengirim (Anda)</h3>
+                            <h3 className="font-bold mb-4 text-blue-800">1. Profil Pengirim</h3>
                             <div className="grid grid-cols-1 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Nama Lengkap</label>
                                     <input
                                         type="text"
                                         className="w-full border p-2 rounded"
-                                        value={currentUser.name}
-                                        onChange={(e) => updateUserField('name', e.target.value)}
+                                        value={senderProfile.name}
+                                        onChange={(e) => updateProfile('name', e.target.value)}
                                         placeholder="Contoh: Ir. Budi Santoso"
                                     />
                                 </div>
@@ -293,8 +191,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                     <input
                                         type="text"
                                         className="w-full border p-2 rounded"
-                                        value={currentUser.title}
-                                        onChange={(e) => updateUserField('title', e.target.value)}
+                                        value={senderProfile.title}
+                                        onChange={(e) => updateProfile('title', e.target.value)}
                                         placeholder="Contoh: Project Manager"
                                     />
                                 </div>
@@ -303,8 +201,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                     <input
                                         type="text"
                                         className="w-full border p-2 rounded"
-                                        value={currentUser.phone}
-                                        onChange={(e) => updateUserField('phone', e.target.value)}
+                                        value={senderProfile.phone}
+                                        onChange={(e) => updateProfile('phone', e.target.value)}
                                         placeholder="Contoh: 0812-3456-7890"
                                     />
                                 </div>
@@ -313,8 +211,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                     <div className="flex gap-4 items-center">
                                         <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'signature')} className="text-sm flex-1" />
                                         <div className="w-32 h-20 border bg-gray-50 flex items-center justify-center overflow-hidden">
-                                            {currentUser.signature ? (
-                                                <img src={currentUser.signature} alt="Sign" className="max-w-full max-h-full" />
+                                            {senderProfile.signature ? (
+                                                <img src={senderProfile.signature} alt="Sign" className="max-w-full max-h-full" />
                                             ) : <span className="text-xs text-gray-400">No Img</span>}
                                         </div>
                                     </div>
@@ -327,7 +225,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                             <h3 className="font-bold mb-2 text-blue-800">2. Kop Surat / Background</h3>
                             
                             <div className="mb-4">
-                                <p className="text-sm font-bold mb-1">Kop Halaman 1</p>
+                                <p className="font-bold mb-1">Kop Halaman 1</p>
                                 <p className="text-xs text-gray-500 mb-2">Upload gambar A4 FULL (Header, Footer, Watermark).</p>
                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'background')} className="mb-2 text-sm" />
                                 {assets.background && (
@@ -338,7 +236,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                             </div>
 
                             <div>
-                                <p className="text-sm font-bold mb-1">Kop Halaman 2+ (Optional)</p>
+                                <p className="font-bold mb-1">Kop Halaman 2+ (Optional)</p>
                                 <p className="text-xs text-gray-500 mb-2">Upload gambar A4 FULL untuk halaman berikutnya. Jika kosong, ikut Halaman 1.</p>
                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'background2')} className="mb-2 text-sm" />
                                 {assets.background2 && (
@@ -375,32 +273,31 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                             <div className="w-full max-w-lg">
                                 <input
                                     type="text"
-                                    placeholder="Search ID, Project, Recipient..."
+                                    placeholder="Cari berdasarkan No. Surat, Proyek, atau Klien..."
                                     className="w-full border p-2 rounded-lg"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <button onClick={onClose} className="text-gray-500 hover:text-black">X</button>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black text-2xl ml-4">&times;</button>
                         </div>
 
                         <div className="flex-1 p-6 bg-gray-50 overflow-auto">
                             <div className="bg-white border rounded-lg overflow-hidden">
-                                <table className="w-full text-sm">
+                                <table className="w-full">
                                     <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
                                         <tr>
-                                            <th className="p-4 text-left">Letter Number</th>
-                                            <th className="p-4 text-left">Project & Type</th>
-                                            <th className="p-4 text-left">Recipient</th>
-                                            <th className="p-4 text-left">Subject</th>
-                                            <th className="p-4 text-left">Owner / Date</th>
-                                            <th className="p-4 text-right">File</th>
+                                            <th className="p-4 text-left">No. Surat</th>
+                                            <th className="p-4 text-left">Proyek & Tipe</th>
+                                            <th className="p-4 text-left">Klien</th>
+                                            <th className="p-4 text-left">Tanggal</th>
+                                            <th className="p-4 text-right">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
                                         {filteredQuotations.length === 0 ? (
                                             <tr>
-                                                <td colSpan="6" className="p-8 text-center text-gray-400">No saved quotations found.</td>
+                                                <td colSpan="5" className="p-8 text-center text-gray-400">Belum ada data tersimpan.</td>
                                             </tr>
                                         ) : (
                                             filteredQuotations.map((q) => (
@@ -412,19 +309,14 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                     </td>
                                                     <td className="p-4">
                                                         <div className="font-bold text-gray-800">{q.projectName}</div>
-                                                        <div className="text-xs text-blue-500 font-bold mt-1 uppercase">{q.type}</div>
+                                                        <div className="text-xs text-blue-500 font-bold mt-1 uppercase">{q.termsType}</div>
                                                     </td>
                                                     <td className="p-4 font-medium text-gray-700">
                                                         {q.clientName}
                                                     </td>
                                                     <td className="p-4">
-                                                        <div className="font-bold">Penawaran Harga</div>
-                                                        <div className="text-xs text-gray-400">No notes</div>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <div className="font-bold">{q.owner}</div>
                                                         <div className="text-xs text-gray-500">
-                                                            {new Date(q.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                            {new Date(q.savedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                         </div>
                                                     </td>
                                                     <td className="p-4 text-right flex justify-end gap-2">
@@ -432,7 +324,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                             onClick={() => onRetrieve(q)}
                                                             className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-xs font-bold flex items-center gap-1"
                                                         >
-                                                            <Icons.FileText size={12} /> Retrieve
+                                                            <Icons.FileText size={12} /> Ambil
                                                         </button>
                                                         <button
                                                             onClick={() => onDelete(q.id)}
@@ -455,20 +347,21 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
         const App = () => {
             // STATE
-            const [currentUser, setCurrentUser] = useState(null);
-            const [users, setUsers] = useState(USERS_DEFAULT);
+            const [senderProfile, setSenderProfile] = useState(DEFAULT_PROFILE);
             const [assets, setAssets] = useState({ background: null, background2: null });
             
-            const [tab, setTab] = useState('multiblock');
             const [showSettings, setShowSettings] = useState(false);
             const [showPreview, setShowPreview] = useState(false);
             const [showSaved, setShowSaved] = useState(false);
             const [savedQuotations, setSavedQuotations] = useState([]);
             const [pdfUrl, setPdfUrl] = useState(null);
 
+            // Terms Template Selection
+            const [termsTemplate, setTermsTemplate] = useState('material');
+
             // Form Data
             const [formData, setFormData] = useState({
-                noSurat: `001/MRP/PWRN/XII/${new Date().getFullYear()}`,
+                noSurat: `001/MRP/PWRN/I/${new Date().getFullYear()}`,
                 date: new Date().toISOString().split('T')[0],
                 clientName: "",
                 clientAddress: "",
@@ -478,7 +371,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 projectName: "",
                 projectLocation: "",
                 items: [],
-                terms: ""
+                terms: TERMS_TEMPLATES.material.terms
             });
 
             const [showClientPhone, setShowClientPhone] = useState(false);
@@ -486,22 +379,35 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
             // LOAD SAVED DATA
             useEffect(() => {
-                const savedUsers = localStorage.getItem('mb_users_v2');
-                const savedAssets = localStorage.getItem('mb_assets_v2');
-                const savedQuots = localStorage.getItem('mb_saved_quotations');
+                const savedProfile = localStorage.getItem('mb_sender_profile');
+                const savedAssets = localStorage.getItem('mb_assets_v3');
+                const savedQuots = localStorage.getItem('mb_saved_quotations_v3');
                 
-                if (savedUsers) setUsers(JSON.parse(savedUsers));
+                if (savedProfile) setSenderProfile(JSON.parse(savedProfile));
                 if (savedAssets) setAssets(JSON.parse(savedAssets));
                 if (savedQuots) setSavedQuotations(JSON.parse(savedQuots));
-
-                resetFormToTab('multiblock');
             }, []);
+
+            // Save Assets when changed
+            useEffect(() => {
+                if (assets.background || assets.background2) {
+                    localStorage.setItem('mb_assets_v3', JSON.stringify(assets));
+                }
+            }, [assets]);
+
+            // Handle Terms Template Change
+            const handleTermsTemplateChange = (templateKey) => {
+                setTermsTemplate(templateKey);
+                setFormData(prev => ({
+                    ...prev,
+                    terms: TERMS_TEMPLATES[templateKey].terms
+                }));
+            };
 
             const handleNewQuotation = () => {
                 if (confirm("Buat penawaran baru? Data yang belum disimpan akan hilang.")) {
-                    const template = TEMPLATES[tab];
                     setFormData({
-                        noSurat: `001/MRP/PWRN/XII/${new Date().getFullYear()}`,
+                        noSurat: `001/MRP/PWRN/I/${new Date().getFullYear()}`,
                         date: new Date().toISOString().split('T')[0],
                         clientName: "",
                         clientAddress: "",
@@ -510,8 +416,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                         clientEmail: "",
                         projectName: "",
                         projectLocation: "",
-                        items: [...template.items],
-                        terms: template.terms
+                        items: [],
+                        terms: TERMS_TEMPLATES[termsTemplate].terms
                     });
                     setShowClientPhone(false);
                     setShowClientEmail(false);
@@ -528,25 +434,23 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                     return;
                 }
 
-                // Check for existing
                 const existingIndex = savedQuotations.findIndex(q =>
                     q.noSurat === formData.noSurat && q.clientName === formData.clientName
                 );
 
                 if (existingIndex !== -1) {
-                    if (confirm(`Data dengan Nomor Surat "${formData.noSurat}" dan Nama "${formData.clientName}" sudah ada. Apakah Anda ingin menimpanya?`)) {
+                    if (confirm(`Data dengan Nomor Surat "${formData.noSurat}" sudah ada. Timpa?`)) {
                         const updatedList = [...savedQuotations];
                         updatedList[existingIndex] = {
                             ...updatedList[existingIndex],
                             savedAt: new Date().toISOString(),
-                            owner: currentUser ? currentUser.name : "Unknown",
-                            type: tab === 'multiblock' ? 'RW' : (tab === 'material' ? 'MAT' : 'MAT+INS'),
+                            termsType: TERMS_TEMPLATES[termsTemplate].label,
                             projectName: formData.projectName,
                             formData: { ...formData },
-                            tab: tab
+                            termsTemplate: termsTemplate
                         };
                         setSavedQuotations(updatedList);
-                        localStorage.setItem('mb_saved_quotations', JSON.stringify(updatedList));
+                        localStorage.setItem('mb_saved_quotations_v3', JSON.stringify(updatedList));
                         alert("Data berhasil diperbarui!");
                     }
                     return;
@@ -555,24 +459,23 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 const newQuotation = {
                     id: Date.now(),
                     savedAt: new Date().toISOString(),
-                    owner: currentUser ? currentUser.name : "Unknown",
-                    type: tab === 'multiblock' ? 'RW' : (tab === 'material' ? 'MAT' : 'MAT+INS'),
+                    termsType: TERMS_TEMPLATES[termsTemplate].label,
                     noSurat: formData.noSurat,
                     clientName: formData.clientName,
                     projectName: formData.projectName,
                     formData: { ...formData },
-                    tab: tab
+                    termsTemplate: termsTemplate
                 };
 
                 const updatedList = [newQuotation, ...savedQuotations];
                 setSavedQuotations(updatedList);
-                localStorage.setItem('mb_saved_quotations', JSON.stringify(updatedList));
+                localStorage.setItem('mb_saved_quotations_v3', JSON.stringify(updatedList));
                 alert("Penawaran berhasil disimpan!");
             };
 
             const handleRetrieveQuotation = (q) => {
-                if (confirm(`Load penawaran ${q.noSurat}? Data saat ini akan tertimpa.`)) {
-                    setTab(q.tab || 'multiblock');
+                if (confirm(`Load penawaran ${q.noSurat}?`)) {
+                    setTermsTemplate(q.termsTemplate || 'material');
                     const loadedData = q.formData;
                     setFormData(loadedData);
 
@@ -590,30 +493,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 if (confirm("Hapus penyimpanan ini?")) {
                     const updatedList = savedQuotations.filter(q => q.id !== id);
                     setSavedQuotations(updatedList);
-                    localStorage.setItem('mb_saved_quotations', JSON.stringify(updatedList));
-                }
-            };
-
-            // Save Assets when changed
-            useEffect(() => {
-                if (assets.background || assets.background2) {
-                    localStorage.setItem('mb_assets_v2', JSON.stringify(assets));
-                }
-            }, [assets]);
-
-            const resetFormToTab = (selectedTab) => {
-                const template = TEMPLATES[selectedTab];
-                setFormData(prev => ({
-                    ...prev,
-                    items: [...template.items], 
-                    terms: template.terms
-                }));
-            };
-
-            const handleTabChange = (newTab) => {
-                if (confirm("Ganti Tab akan mereset Item dan Syarat Kondisi ke default. Lanjutkan?")) {
-                    setTab(newTab);
-                    resetFormToTab(newTab);
+                    localStorage.setItem('mb_saved_quotations_v3', JSON.stringify(updatedList));
                 }
             };
 
@@ -634,13 +514,12 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             };
 
             const addItem = () => {
-                // Always add a simple item now
-                const newItem = { desc: "Biaya Tambahan / Item Baru", unit: "Ls", qty: 1, price: 0 };
+                const newItem = { desc: "", unit: "Ls", qty: 1, price: 0 };
                 setFormData({ ...formData, items: [...formData.items, newItem] });
             };
 
             const addMaterial = () => {
-                const newItem = { desc: "Material Baru\nMerk: \nTipe: \nUkuran roll: ", unit: "m2", qty: 1, price: 0 };
+                const newItem = { desc: "Material \nMerk: \nTipe: \nUkuran roll: ", unit: "m2", qty: 1, price: 0 };
                 setFormData({ ...formData, items: [...formData.items, newItem] });
             };
 
@@ -657,57 +536,35 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 const end = textarea.selectionEnd;
                 const text = textarea.value;
 
-                if (start === end) return; // No selection
+                if (start === end) return;
 
                 const newText = text.substring(0, start) + "*" + text.substring(start, end) + "*" + text.substring(end);
-
                 updateItem(index, 'desc', newText);
 
-                // Restore selection (slightly adjusted)
                 setTimeout(() => {
                     textarea.focus();
                     textarea.setSelectionRange(start + 1, end + 1);
                 }, 0);
             };
 
-            // Helper for drawing rich text (Markdown-style *bold*) in PDF
+            // Helper for drawing rich text in PDF
             const drawRichLine = (doc, text, x, y, maxWidth) => {
                 const parts = text.split('*');
                 let currentX = x;
                 let currentY = y;
-                let buffer = ""; // Current line buffer to measure
-
-                // Flatten parts to words for wrapping?
-                // For simplicity in v2.1: We assume lines don't wrap heavily with bolding mid-sentence.
-                // We'll process parts.
 
                 parts.forEach((part, idx) => {
                     const isBold = idx % 2 === 1;
                     doc.setFont("helvetica", isBold ? "bold" : "normal");
-
-                    // Naive approach: Text wrap per part (imperfect but works for short labels)
-                    // Better approach: Split by words, measure, flow.
 
                     const words = part.split(' ');
                     words.forEach((word, wIdx) => {
                         const wordWithSpace = word + (wIdx < words.length - 1 ? " " : "");
                         const wWidth = doc.getTextWidth(wordWithSpace);
 
-                        // Check wrapping relative to X start
-                        // If currentX + wWidth > x + maxWidth
-                        // But x is absolute left. MaxWidth is width of column.
-                        // Safe right boundary = x + maxWidth
-
-                        // NOTE: x passed to function is the start of *this text block*.
-                        // We need the absolute left margin of the cell to calculate wrapping properly.
-                        // Assuming x is valid start.
-
-                        // Simple wrap protection (assuming cell X starts around 23mm)
-                        // If we drift too far right (e.g. > 90mm), wrap.
-                        // Col width is 70mm. Margin left 23. Max X ~93.
                         if (currentX > 90) {
                              currentY += 4;
-                             currentX = 25; // Reset to approx left cell margin
+                             currentX = 25;
                         }
 
                         doc.text(wordWithSpace, currentX, currentY);
@@ -715,42 +572,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                     });
                 });
 
-                doc.__lastLineY = currentY + 4.5; // Store next Y for parent loop
-            };
-
-            const renderDescription = (text) => {
-                if (!text) return "";
-                return text.split('\n').map((line, i) => {
-                    // 1. Check for Label: Value pattern at start of line
-                    // Matches any alphanumeric label followed by colon, e.g. "Biaya Angkut:", "Merk:"
-                    // Limit label length to avoid false positives on long sentences
-                    const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
-
-                    let content = [];
-                    let remainder = line;
-
-                    if (labelMatch) {
-                        const label = labelMatch[1];
-                        const value = labelMatch[2];
-                        content.push(<span key="label" className="font-bold">{label} </span>);
-                        remainder = value;
-                    }
-
-                    // 2. Parse Markdown Bold (*text*) in the remainder
-                    // We split by *
-                    const parts = remainder.split('*');
-                    parts.forEach((part, idx) => {
-                         // Even indices are normal, Odd indices are bold (assuming closed pairs)
-                         // Simple parser: *bold* -> part0 (normal), part1 (bold), part2 (normal)
-                         if (idx % 2 === 1) {
-                             content.push(<span key={idx} className="font-bold">{part}</span>);
-                         } else {
-                             content.push(<span key={idx}>{part}</span>);
-                         }
-                    });
-
-                    return <div key={i}>{content}</div>;
-                });
+                doc.__lastLineY = currentY + 4.5;
             };
 
             // --- PDF GENERATION ---
@@ -758,17 +580,14 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 
-                // Set FONT
                 doc.setFont("helvetica");
                 doc.setFontSize(11);
 
-                // Helper to add background to current page
                 const addBackground = () => {
                     const pageNum = doc.internal.getNumberOfPages();
-                    let bgImg = assets.background; // Default to Page 1
+                    let bgImg = assets.background;
 
                     if (pageNum > 1) {
-                         // Use Page 2 bg if available, else fallback to Page 1
                         bgImg = assets.background2 || assets.background;
                     }
 
@@ -777,25 +596,19 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                     }
                 };
 
-                // Add background to first page
                 addBackground();
 
-                // MARGINS (SAFE ZONE)
-                const marginTop = 42.5; // 4.25cm
-                const marginLeft = 23;  // 2.3cm
-                const marginRight = 23; // 2.3cm
-                // Bottom is handled by check logic (3.5cm -> max Y approx 262)
+                const marginTop = 42.5;
+                const marginLeft = 23;
+                const marginRight = 23;
                 
                 let yPos = marginTop;
 
-                // 2. HEADER INFO
                 doc.setTextColor(0);
                 
-                // Kanan: Tanggal
                 const dateStr = new Date(formData.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
                 doc.text(`Jakarta, ${dateStr}`, 140, yPos);
                 
-                // Kiri: Nomor
                 doc.text(`No: ${formData.noSurat}`, marginLeft, yPos);
                 yPos += 10;
 
@@ -823,7 +636,6 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                 yPos += 5;
 
-                // Pembuka
                 doc.text("Dengan hormat,", marginLeft, yPos);
                 yPos += 5;
                 const intro = `Sehubungan dengan kebutuhan proyek ${formData.projectName}, berikut kami sampaikan penawaran harga:`;
@@ -831,24 +643,16 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 doc.text(introLines, marginLeft, yPos);
                 yPos += (introLines.length * 5) + 4;
 
-                // 3. TABEL ITEM
+                // TABLE
                 const tableBody = formData.items.map(item => {
-                    let descText = "";
-                    if (item.materialName !== undefined) {
-                        descText = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
-                    } else {
-                        descText = item.desc;
-                    }
-
                     return [
-                        descText,
+                        item.desc,
                         `${item.qty} ${item.unit}`,
                         formatRupiah(item.price),
                         formatRupiah(item.qty * item.price)
                     ];
                 });
 
-                // Add Total Row
                 tableBody.push([
                     { content: 'TOTAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
                     { content: formatRupiah(calculateTotal()), styles: { fontStyle: 'bold', halign: 'center' } }
@@ -860,17 +664,17 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                     body: tableBody,
                     theme: 'grid',
                     headStyles: {
-                        fillColor: null, // Transparent
-                        textColor: 0, // Black
+                        fillColor: null,
+                        textColor: 0,
                         fontStyle: 'bold',
-                        fontSize: 10,
+                        fontSize: 11,
                         lineWidth: 0.1,
                         lineColor: 0,
                         halign: 'center'
                     },
                     styles: {
                         font: 'helvetica',
-                        fontSize: 10,
+                        fontSize: 11,
                         cellPadding: 2,
                         textColor: 0,
                         lineColor: 0,
@@ -883,7 +687,6 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                         3: { cellWidth: 40, halign: 'center', valign: 'middle' }
                     },
                     margin: { left: marginLeft, right: marginRight },
-                    // Logic to add background if table splits page
                     willDrawPage: (data) => {
                          if (data.pageNumber > 1) {
                             const bg = assets.background2 || assets.background;
@@ -891,66 +694,41 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                          }
                     },
                     didDrawCell: (data) => {
-                        // Manual rendering for mixed bold/normal text in Description column
                         if (data.section === 'body' && data.column.index === 0) {
                             const rowIndex = data.row.index;
-                            if (rowIndex >= formData.items.length) return; // Skip total row
+                            if (rowIndex >= formData.items.length) return;
 
                             const item = formData.items[rowIndex];
+                            let cellText = item.desc;
 
-                            // Determine text content
-                            let cellText = "";
-                            if (item.materialName !== undefined) {
-                                // Legacy support or just use the constructed string
-                                cellText = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
-                            } else {
-                                cellText = item.desc;
-                            }
-
-                            // Clean the cell
                             const { x, y, width, height } = data.cell;
                             doc.setFillColor(255, 255, 255);
                             doc.rect(x + 0.2, y + 0.2, width - 0.4, height - 0.4, 'F');
 
                             doc.setTextColor(0, 0, 0);
-                            doc.setFontSize(10);
+                            doc.setFontSize(11);
 
-                            // Parse and Draw
                             const lines = cellText.split('\n');
                             let currentY = y + 4;
-                            const cellInnerWidth = width - 4; // 2mm padding each side
+                            const cellInnerWidth = width - 4;
 
                             lines.forEach(line => {
-                                // 1. Check for Label: Value pattern at start of line
                                 const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
 
                                 let startX = x + 2;
 
                                 if (labelMatch) {
-                                    // Label (Bold)
                                     doc.setFont("helvetica", "bold");
-                                    const label = labelMatch[1] + " "; // Add space
+                                    const label = labelMatch[1] + " ";
                                     doc.text(label, startX, currentY);
                                     startX += doc.getTextWidth(label);
-
-                                    // Process Remainder (Value)
-                                    // Note: Simple rich text support for *bold* in value part is complex with wrapping.
-                                    // For now, we render the rest as normal text, but support *bold* if it doesn't wrap weirdly?
-                                    // To keep it safe: Render remainder normally, stripping * for now or simple parse?
-                                    // Let's support simple *bold* parsing even in value.
 
                                     const value = labelMatch[2];
                                     drawRichLine(doc, value, startX, currentY, cellInnerWidth - (startX - (x+2)));
                                 } else {
-                                    // Normal Line (check for *bold*)
                                     drawRichLine(doc, line, startX, currentY, cellInnerWidth);
                                 }
 
-                                // Estimate line height advancement (approximate, since drawRichLine handles single line logic mostly)
-                                // If wrapped, drawRichLine returns next Y?
-                                // Complex wrapping logic is hard to inject here perfectly.
-                                // Fallback: We advance fixed amount per "paragraph" line from source.
-                                // Refinement: drawRichLine needs to handle wrapping internally and return newY.
                                 currentY = doc.__lastLineY || (currentY + 5);
                             });
                         }
@@ -959,21 +737,19 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                 yPos = doc.lastAutoTable.finalY + 12;
 
-                // Check page break logic (297mm - 35mm = 262mm)
                 if (yPos > 262) {
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
                 }
 
-                // 4. SYARAT & KONDISI
-                doc.setFontSize(10);
+                // TERMS
+                doc.setFontSize(11);
                 doc.setFont("helvetica", "bold");
                 doc.text("Kondisi Penawaran:", marginLeft, yPos);
                 yPos += 5;
                 doc.setFont("helvetica", "normal");
 
-                // Replace Placeholders
                 let processedTerms = formData.terms;
                 processedTerms = processedTerms.replace(/\[NAMA_PROYEK\]/g, formData.projectName || "....................");
 
@@ -993,7 +769,6 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 doc.text(termsLines, marginLeft, yPos);
                 yPos += (termsLines.length * 4.5) + 6;
 
-                // Closing Text
                 const closing = "Demikian penawaran harga ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.";
                 const closingLines = doc.splitTextToSize(closing, 170);
 
@@ -1007,35 +782,34 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                 doc.setFontSize(11);
 
-                // Check space for signature
-                if (yPos > 245) { // Leave enough space for signature block
+                if (yPos > 245) {
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
                 }
 
-                // 5. SIGNATURE
+                // SIGNATURE
                 doc.text("Hormat kami,", marginLeft, yPos);
                 
-                if (currentUser.signature && signDims) {
-                    doc.addImage(currentUser.signature, null, marginLeft, yPos + 4, signDims.width, signDims.height);
-                } else if (currentUser.signature) {
-                     doc.addImage(currentUser.signature, null, marginLeft, yPos + 4, 40, 25);
+                if (senderProfile.signature && signDims) {
+                    doc.addImage(senderProfile.signature, null, marginLeft, yPos + 4, signDims.width, signDims.height);
+                } else if (senderProfile.signature) {
+                     doc.addImage(senderProfile.signature, null, marginLeft, yPos + 4, 40, 25);
                 } else {
                     doc.text("(...........................)", marginLeft, yPos + 25);
                 }
                 
                 yPos += 35;
                 doc.setFont("helvetica", "bold");
-                doc.text(currentUser.name, marginLeft, yPos);
+                doc.text(senderProfile.name || "[Nama Pengirim]", marginLeft, yPos);
 
                 yPos += 5;
                 doc.setFont("helvetica", "normal");
-                doc.text(currentUser.title, marginLeft, yPos);
+                doc.text(senderProfile.title || "[Jabatan]", marginLeft, yPos);
 
                 yPos += 5;
                 doc.setFont("helvetica", "normal");
-                doc.text(currentUser.phone || "", marginLeft, yPos);
+                doc.text(senderProfile.phone || "", marginLeft, yPos);
 
                 return doc;
             };
@@ -1051,10 +825,9 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
             const handlePreview = async () => {
                 let signDims = null;
-                if (currentUser && currentUser.signature) {
+                if (senderProfile && senderProfile.signature) {
                     try {
-                        const dims = await getImageDimensions(currentUser.signature);
-                        // Fit within 40mm x 25mm
+                        const dims = await getImageDimensions(senderProfile.signature);
                         const maxWidth = 40;
                         const maxHeight = 25;
                         const ratio = Math.min(maxWidth / dims.width, maxHeight / dims.height);
@@ -1083,111 +856,43 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 }
             };
 
-            // HTML VISUALIZATION LOGIC
-            const getPreviewPages = () => {
-                const pages = [];
-                const items = formData.items;
+            // Render Description with Bold Support
+            const renderDescription = (text) => {
+                if (!text) return "";
+                return text.split('\n').map((line, i) => {
+                    const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
 
-                // Constants (mm)
-                const CONTENT_HEIGHT = 219.5; // 297mm - 42.5mm (top) - 35mm (bottom)
-                const HEADER_HEIGHT_P1 = 65;  // Space for Header Info (No, Date, Client, Intro...)
-                const TABLE_HEADER_HEIGHT = 10;
-                const ROW_PAD = 4; // mm padding vertical total
-                const LINE_HEIGHT = 4.5; // mm per line
-                const FOOTER_SIG_HEIGHT = 60; // Closing text + Sig Image + Name/Title
+                    let content = [];
+                    let remainder = line;
 
-                // Calculate Footer Height (Terms + Sig)
-                const getFooterHeight = () => {
-                     let text = formData.terms || "";
-                     text = text.replace(/\[NAMA_PROYEK\]/g, formData.projectName || "....................");
-                     const lines = text.split('\n').length;
-                     const wrapBonus = Math.ceil(text.length / 95); // Rough wrap est
-                     const termHeight = (Math.max(lines, wrapBonus) * LINE_HEIGHT) + 12; // + Header "Kondisi..."
-                     return termHeight + FOOTER_SIG_HEIGHT;
-                };
-
-                const FOOTER_HEIGHT = getFooterHeight();
-
-                let currentPage = {
-                    items: [],
-                    hasHeader: true,
-                    isLastPage: false,
-                    currentY: HEADER_HEIGHT_P1 + TABLE_HEADER_HEIGHT
-                };
-
-                items.forEach((item, index) => {
-                    // Calculate Item Height
-                    let descText = "";
-                    if (item.materialName !== undefined) {
-                        descText = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
-                    } else {
-                        descText = item.desc || "";
+                    if (labelMatch) {
+                        const label = labelMatch[1];
+                        const value = labelMatch[2];
+                        content.push(<span key="label" className="font-bold">{label} </span>);
+                        remainder = value;
                     }
 
-                    const lines = descText.split('\n').length;
-                    const wrapBonus = Math.ceil(descText.length / 60); // Column width ~70mm -> ~50-60 chars
-                    const effectiveLines = Math.max(lines, wrapBonus);
-
-                    const itemHeight = (effectiveLines * LINE_HEIGHT) + ROW_PAD + 4; // +4 for internal cell padding
-
-                    // Check if fits
-                    if (currentPage.currentY + itemHeight > CONTENT_HEIGHT) {
-                        // Push current
-                        pages.push(currentPage);
-
-                        // Start new
-                        currentPage = {
-                            items: [],
-                            hasHeader: false,
-                            isLastPage: false,
-                            currentY: TABLE_HEADER_HEIGHT // Table Header only
-                        };
-                    }
-
-                    currentPage.items.push(item);
-                    currentPage.currentY += itemHeight;
-                });
-
-                // Check Footer
-                if (currentPage.currentY + FOOTER_HEIGHT > CONTENT_HEIGHT) {
-                    // Push current
-                    pages.push(currentPage);
-
-                    // New page for Footer
-                    pages.push({
-                        items: [],
-                        hasHeader: false,
-                        isLastPage: true,
-                        currentY: 0
+                    const parts = remainder.split('*');
+                    parts.forEach((part, idx) => {
+                         if (idx % 2 === 1) {
+                             content.push(<span key={idx} className="font-bold">{part}</span>);
+                         } else {
+                             content.push(<span key={idx}>{part}</span>);
+                         }
                     });
-                } else {
-                    currentPage.isLastPage = true;
-                    pages.push(currentPage);
-                }
 
-                // Edge case handling if no items exist (show at least one page)
-                if (pages.length === 0) {
-                     pages.push({ items: [], hasHeader: true, isLastPage: true });
-                }
-
-                return pages;
+                    return <div key={i}>{content}</div>;
+                });
             };
 
-            // RENDER LOGIC
-            if (!currentUser) {
-                return <LoginScreen users={users} onLogin={setCurrentUser} />;
-            }
-
-            const previewPages = getPreviewPages();
-
             return (
-                <div className="min-h-screen pb-20 font-arial text-[11pt]">
+                <div className="min-h-screen pb-20">
                     {/* NAVBAR */}
                     <div className="bg-white shadow border-b sticky top-0 z-50">
-                        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Icons.FileText className="text-blue-600" />
-                                <h1 className="font-bold text-xl hidden sm:block">Multibangun Offer System v2.1</h1>
+                                <h1 className="font-bold text-xl hidden sm:block">Multibangun Offer System</h1>
                                 <button onClick={() => setShowSaved(true)} className="ml-4 flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-blue-200">
                                     <Icons.FileText size={14}/> Data Tersimpan
                                 </button>
@@ -1196,33 +901,21 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                 </button>
                             </div>
                             <div className="flex items-center gap-4">
-                                <div className="text-right hidden sm:block">
-                                    <div className="font-bold text-sm">{currentUser.name}</div>
-                                    <div className="text-xs text-gray-500">{currentUser.title}</div>
-                                </div>
-                                <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-gray-100 rounded text-gray-600">
+                                <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-gray-100 rounded text-gray-600 flex items-center gap-2">
                                     <Icons.Settings size={20} />
-                                </button>
-                                <button onClick={() => setCurrentUser(null)} className="p-2 hover:bg-red-50 rounded text-red-600">
-                                    <Icons.LogOut size={20} />
+                                    <span className="hidden sm:inline text-sm">Pengaturan</span>
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
+                    <div className="max-w-4xl mx-auto px-4 py-8">
                         
-                        {/* LEFT: FORM INPUT */}
-                        <div className="flex-1 bg-white p-6 rounded shadow-sm h-fit z-10 relative">
-                            {/* TABS */}
-                            <div className="flex bg-gray-100 p-1 rounded-lg mb-6 overflow-x-auto">
-                                <button onClick={() => tab !== 'multiblock' && handleTabChange('multiblock')} className={`flex-1 py-2 px-3 text-sm font-bold rounded-md whitespace-nowrap ${tab === 'multiblock' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Retaining Wall</button>
-                                <button onClick={() => tab !== 'material' && handleTabChange('material')} className={`flex-1 py-2 px-3 text-sm font-bold rounded-md whitespace-nowrap ${tab === 'material' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Penawaran Material</button>
-                                <button onClick={() => tab !== 'install' && handleTabChange('install')} className={`flex-1 py-2 px-3 text-sm font-bold rounded-md whitespace-nowrap ${tab === 'install' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Penawaran Material dan Pasang</button>
-                            </div>
-
+                        {/* FORM */}
+                        <div className="bg-white p-6 rounded shadow-sm">
+                            
                             {/* CLIENT INFO */}
-                            <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                            <div className="grid grid-cols-2 gap-4 mb-6">
                                 <div className="col-span-2">
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Nama Klien (PT)</label>
                                     <input type="text" className="w-full border p-2 rounded" placeholder="PT Contoh Sejahtera" value={formData.clientName} onChange={e => setFormData({...formData, clientName: e.target.value})} />
@@ -1281,21 +974,19 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                             {/* ITEMS TABLE */}
                             <div className="mb-6">
-                                <h3 className="font-bold mb-2 flex justify-between items-center text-sm">
+                                <h3 className="font-bold mb-2 flex justify-between items-center">
                                     Item Penawaran
                                     <div className="flex gap-2">
-                                        {tab !== 'multiblock' && (
-                                            <button onClick={addMaterial} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-blue-200">
-                                                <Icons.Plus size={14}/> Tambah Material
-                                            </button>
-                                        )}
+                                        <button onClick={addMaterial} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-blue-200">
+                                            <Icons.Plus size={14}/> Tambah Material
+                                        </button>
                                         <button onClick={addItem} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-green-200">
                                             <Icons.Plus size={14}/> Tambah Biaya
                                         </button>
                                     </div>
                                 </h3>
                                 <div className="border rounded overflow-hidden">
-                                    <table className="w-full text-sm">
+                                    <table className="w-full">
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th className="p-2 text-left">Deskripsi</th>
@@ -1306,53 +997,38 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {formData.items.map((item, idx) => (
-                                                <tr key={idx} className="border-t align-top">
-                                                    <td className="p-2">
-                                                        {item.materialName !== undefined ? (
-                                                            <div className="relative group">
-                                                                <button onClick={() => convertToText(idx)} className="absolute right-0 top-0 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Ubah ke Teks Bebas">
-                                                                    <Icons.Edit size={14} />
-                                                                </button>
-                                                                <div className="flex flex-col gap-1 pr-6">
-                                                                    <input type="text" className="w-full bg-transparent outline-none font-bold placeholder-gray-300" placeholder="Nama Material" value={item.materialName} onChange={e => updateItem(idx, 'materialName', e.target.value)} />
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="font-bold text-xs">Merk:</span>
-                                                                        <input type="text" className="flex-1 bg-transparent outline-none font-bold placeholder-gray-300" placeholder="Merk" value={item.brand} onChange={e => updateItem(idx, 'brand', e.target.value)} />
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="text-xs">Tipe:</span>
-                                                                        <input type="text" className="flex-1 bg-transparent outline-none placeholder-gray-300" placeholder="Tipe" value={item.type} onChange={e => updateItem(idx, 'type', e.target.value)} />
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="text-xs">Ukuran roll:</span>
-                                                                        <input type="text" className="flex-1 bg-transparent outline-none placeholder-gray-300" placeholder="Ukuran" value={item.rollSize} onChange={e => updateItem(idx, 'rollSize', e.target.value)} />
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="relative">
-                                                                <div className="flex justify-end mb-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0 -top-6">
-                                                                    <button onClick={() => handleBold(idx)} className="bg-gray-200 hover:bg-gray-300 px-2 py-0.5 rounded text-xs font-bold" title="Bold Selection">B</button>
-                                                                </div>
-                                                                <textarea id={`item-desc-${idx}`} className="w-full bg-transparent outline-none resize-none h-24 group" value={item.desc} onChange={e => updateItem(idx, 'desc', e.target.value)}></textarea>
-                                                                <div className="text-[10px] text-gray-400 mt-1">Gunakan *text* untuk bold</div>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-center" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} /></td>
-                                                    <td className="p-2"><input type="text" className="w-full bg-transparent outline-none text-center" value={item.unit} onChange={e => updateItem(idx, 'unit', e.target.value)} /></td>
-                                                    <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-right" value={item.price} onChange={e => updateItem(idx, 'price', Number(e.target.value))} /></td>
-                                                    <td className="p-2 text-center">
-                                                        <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600"><Icons.Trash2 size={14} /></button>
+                                            {formData.items.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="5" className="p-8 text-center text-gray-400">
+                                                        Belum ada item. Klik "Tambah Material" atau "Tambah Biaya" untuk menambahkan.
                                                     </td>
                                                 </tr>
-                                            ))}
-                                            <tr className="bg-blue-50 font-bold">
-                                                <td colSpan={3} className="p-2 text-right">TOTAL</td>
-                                                <td className="p-2 text-right">{formatRupiah(calculateTotal())}</td>
-                                                <td></td>
-                                            </tr>
+                                            ) : (
+                                                formData.items.map((item, idx) => (
+                                                    <tr key={idx} className="border-t align-top">
+                                                        <td className="p-2">
+                                                            <div className="relative group">
+                                                                <button onClick={() => handleBold(idx)} className="absolute right-0 top-0 bg-gray-200 hover:bg-gray-300 px-2 py-0.5 rounded text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity" title="Bold Selection">B</button>
+                                                                <textarea id={`item-desc-${idx}`} className="w-full bg-transparent outline-none resize-none h-24" placeholder="Deskripsi item..." value={item.desc} onChange={e => updateItem(idx, 'desc', e.target.value)}></textarea>
+                                                                <div className="text-[9pt] text-gray-400 mt-1">Gunakan *text* untuk bold</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-center" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} /></td>
+                                                        <td className="p-2"><input type="text" className="w-full bg-transparent outline-none text-center" value={item.unit} onChange={e => updateItem(idx, 'unit', e.target.value)} /></td>
+                                                        <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-right" value={item.price} onChange={e => updateItem(idx, 'price', Number(e.target.value))} /></td>
+                                                        <td className="p-2 text-center">
+                                                            <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600"><Icons.Trash2 size={14} /></button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                            {formData.items.length > 0 && (
+                                                <tr className="bg-blue-50 font-bold">
+                                                    <td colSpan={3} className="p-2 text-right">TOTAL</td>
+                                                    <td className="p-2 text-right">{formatRupiah(calculateTotal())}</td>
+                                                    <td></td>
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -1360,8 +1036,25 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                             {/* TERMS */}
                             <div className="mb-6">
-                                <label className="block text-xs font-bold text-gray-500 mb-1">Syarat & Kondisi (Edit seperlunya)</label>
-                                <textarea className="w-full border p-2 rounded h-64 text-sm font-mono leading-relaxed" value={formData.terms} onChange={e => setFormData({...formData, terms: e.target.value})} />
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-xs font-bold text-gray-500">Syarat & Kondisi</label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-500">Template:</span>
+                                        <select 
+                                            className="border rounded px-3 py-1 text-sm bg-white"
+                                            value={termsTemplate}
+                                            onChange={(e) => handleTermsTemplateChange(e.target.value)}
+                                        >
+                                            <option value="retaining">Retaining Wall</option>
+                                            <option value="material">Material</option>
+                                            <option value="install">Material + Instalasi</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <textarea className="w-full border p-2 rounded h-64 font-mono leading-relaxed" value={formData.terms} onChange={e => setFormData({...formData, terms: e.target.value})} />
+                                <div className="text-[9pt] text-gray-400 mt-1">
+                                    Placeholder: [NAMA_PROYEK] = nama proyek, [TANGGAL_BERLAKU] = 14 hari dari tanggal surat
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -1374,144 +1067,13 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                             </div>
                         </div>
 
-                        {/* RIGHT: LIVE PREVIEW (MULTI-PAGE SIMULATION) */}
-                        <div className="hidden lg:block w-[210mm]">
-                            <h3 className="text-center text-gray-500 mb-4 font-bold text-sm uppercase tracking-wide">Live Layout Preview (HTML)</h3>
-                            
-                            {previewPages.map((pageData, pageIdx) => {
-                                // Determine which background to show
-                                const bgImage = pageIdx === 0 ? assets.background : (assets.background2 || assets.background);
-
-                                return (
-                                    <div key={pageIdx} className="preview-paper mx-auto">
-
-                                        {/* Background Image Layer */}
-                                        {bgImage && (
-                                            <img src={bgImage} className="paper-background" alt={`Page ${pageIdx+1} Background`} />
-                                        )}
-
-                                        {/* Content Layer */}
-                                        <div className="paper-content">
-
-                                            {/* Header Section (Only on Page 1) */}
-                                            {pageData.hasHeader && (
-                                                <>
-                                                    {!assets.background && <div className="text-center text-red-400 text-sm border-2 border-dashed border-red-300 p-4 mb-4">Background belum diupload.</div>}
-
-                                                    <div className="flex justify-between mb-4">
-                                                        <div>
-                                                            <div>No: {formData.noSurat}</div>
-                                                            <div className="mt-4">
-                                                                <div>Kepada Yth:</div>
-                                                                <div className="font-bold text-lg uppercase">{formData.clientName || "[Nama Klien]"}</div>
-                                                                <div className="w-64">{formData.clientAddress || "[Alamat Klien]"}</div>
-                                                                <div className="mt-2">Up: {formData.clientUp}</div>
-                                                                {formData.clientPhone && <div>No. Telpon: {formData.clientPhone}</div>}
-                                                                {formData.clientEmail && <div>Email: {formData.clientEmail}</div>}
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            Jakarta, {new Date(formData.date).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="mb-4">
-                                                        Dengan hormat,<br/>
-                                                        Sehubungan dengan kebutuhan proyek <b>{formData.projectName}</b>, berikut kami sampaikan penawaran harga:
-                                                    </div>
-                                                </>
-                                            )}
-
-                                            {/* Spacer for Page 2+ to avoid header collision if using same BG */}
-                                            {!pageData.hasHeader && <div className="h-4"></div>}
-
-                                            {/* Items Table */}
-                                            {pageData.items.length > 0 && (
-                                                <table className="w-full border-collapse mb-4 border border-black">
-                                                    <thead className="text-black font-bold text-[10pt]">
-                                                        <tr>
-                                                            <th className="p-2 text-center border border-black">Material</th>
-                                                            <th className="p-2 text-center border border-black">Kuantitas</th>
-                                                            <th className="p-2 text-center border border-black">Harga Satuan</th>
-                                                            <th className="p-2 text-center border border-black">Total Harga</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="text-[10pt]">
-                                                        {pageData.items.map((item, i) => (
-                                                            <tr key={i}>
-                                                                <td className="p-2 border border-black align-top">
-                                                                    {item.materialName !== undefined ? (
-                                                                        <div>
-                                                                            <div className="font-bold">{item.materialName}</div>
-                                                                            <div className="font-bold">Merk: {item.brand}</div>
-                                                                            <div>Tipe: {item.type}</div>
-                                                                            <div>Ukuran roll: {item.rollSize}</div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="whitespace-pre-wrap">{renderDescription(item.desc)}</div>
-                                                                    )}
-                                                                </td>
-                                                                <td className="p-2 text-center border border-black align-middle">{item.qty} {item.unit}</td>
-                                                                <td className="p-2 text-center border border-black align-middle">{formatRupiah(item.price)}</td>
-                                                                <td className="p-2 text-center border border-black align-middle">{formatRupiah(item.price * item.qty)}</td>
-                                                            </tr>
-                                                        ))}
-                                                        {pageData.isLastPage && (
-                                                            <tr className="font-bold">
-                                                                <td colSpan={3} className="p-2 text-right border border-black">TOTAL</td>
-                                                                <td className="p-2 text-center border border-black">{formatRupiah(calculateTotal())}</td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
-                                            )}
-
-                                            {/* Terms & Signature (Only on Last Page) */}
-                                            {pageData.isLastPage && (
-                                                <>
-                                                    <div className="text-[10pt] whitespace-pre-wrap font-sans mb-4 leading-snug">
-                                                                <strong className="block text-[10pt] font-bold mb-2">Kondisi Penawaran:</strong>
-                                                        {(() => {
-                                                            let t = formData.terms;
-                                                            t = t.replace(/\[NAMA_PROYEK\]/g, formData.projectName || "....................");
-
-                                                            const dateObj = new Date(formData.date);
-                                                            dateObj.setDate(dateObj.getDate() + 14);
-                                                            const validUntil = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
-                                                            t = t.replace(/\[TANGGAL_BERLAKU\]/g, validUntil);
-                                                            return t;
-                                                        })()}
-                                                        <div className="mt-2">
-                                                            Demikian penawaran harga ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="mt-6 text-left">
-                                                        <div className="mb-4">Hormat kami,</div>
-                                                        <div className="h-24 mb-2 flex items-end">
-                                                            {currentUser.signature ? <img src={currentUser.signature} className="max-h-24" /> : <div>(...........................)</div>}
-                                                        </div>
-                                                        <div className="font-bold">{currentUser.name}</div>
-                                                        <div>{currentUser.title}</div>
-                                                        <div>{currentUser.phone}</div>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
                     </div>
 
                     <SettingsModal 
                         isOpen={showSettings} 
                         onClose={() => setShowSettings(false)}
-                        currentUser={currentUser}
-                        setCurrentUser={setCurrentUser}
-                        users={users}
-                        setUsers={setUsers}
+                        senderProfile={senderProfile}
+                        setSenderProfile={setSenderProfile}
                         assets={assets}
                         setAssets={setAssets}
                     />
