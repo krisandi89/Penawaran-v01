@@ -497,9 +497,58 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 resetFormToTab('multiblock');
             }, []);
 
+            const handleNewQuotation = () => {
+                if (confirm("Buat penawaran baru? Data yang belum disimpan akan hilang.")) {
+                    const template = TEMPLATES[tab];
+                    setFormData({
+                        noSurat: `001/MRP/PWRN/XII/${new Date().getFullYear()}`,
+                        date: new Date().toISOString().split('T')[0],
+                        clientName: "",
+                        clientAddress: "",
+                        clientUp: "",
+                        clientPhone: "",
+                        clientEmail: "",
+                        projectName: "",
+                        projectLocation: "",
+                        items: [...template.items],
+                        terms: template.terms
+                    });
+                    setShowClientPhone(false);
+                    setShowClientEmail(false);
+                    if (pdfUrl) {
+                        URL.revokeObjectURL(pdfUrl);
+                        setPdfUrl(null);
+                    }
+                }
+            };
+
             const handleSaveQuotation = () => {
                 if (!formData.noSurat) {
                     alert("Nomor Surat harus diisi!");
+                    return;
+                }
+
+                // Check for existing
+                const existingIndex = savedQuotations.findIndex(q =>
+                    q.noSurat === formData.noSurat && q.clientName === formData.clientName
+                );
+
+                if (existingIndex !== -1) {
+                    if (confirm(`Data dengan Nomor Surat "${formData.noSurat}" dan Nama "${formData.clientName}" sudah ada. Apakah Anda ingin menimpanya?`)) {
+                        const updatedList = [...savedQuotations];
+                        updatedList[existingIndex] = {
+                            ...updatedList[existingIndex],
+                            savedAt: new Date().toISOString(),
+                            owner: currentUser ? currentUser.name : "Unknown",
+                            type: tab === 'multiblock' ? 'RW' : (tab === 'material' ? 'MAT' : 'MAT+INS'),
+                            projectName: formData.projectName,
+                            formData: { ...formData },
+                            tab: tab
+                        };
+                        setSavedQuotations(updatedList);
+                        localStorage.setItem('mb_saved_quotations', JSON.stringify(updatedList));
+                        alert("Data berhasil diperbarui!");
+                    }
                     return;
                 }
 
@@ -1036,29 +1085,92 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
             // HTML VISUALIZATION LOGIC
             const getPreviewPages = () => {
-                // This is a rough simulation of pagination for the HTML preview.
-                // It's not 100% accurate to the PDF but gives a visual sense of page breaks.
+                const pages = [];
+                const items = formData.items;
 
-                const ITEMS_PER_PAGE_1 = 6; // Rough estimate including header/intro
+                // Constants (mm)
+                const CONTENT_HEIGHT = 219.5; // 297mm - 42.5mm (top) - 35mm (bottom)
+                const HEADER_HEIGHT_P1 = 65;  // Space for Header Info (No, Date, Client, Intro...)
+                const TABLE_HEADER_HEIGHT = 10;
+                const ROW_PAD = 4; // mm padding vertical total
+                const LINE_HEIGHT = 4.5; // mm per line
+                const FOOTER_SIG_HEIGHT = 60; // Closing text + Sig Image + Name/Title
 
-                if (formData.items.length <= ITEMS_PER_PAGE_1) {
-                    // Fits on Page 1
-                    return [{
-                        items: formData.items,
+                // Calculate Footer Height (Terms + Sig)
+                const getFooterHeight = () => {
+                     let text = formData.terms || "";
+                     text = text.replace(/\[NAMA_PROYEK\]/g, formData.projectName || "....................");
+                     const lines = text.split('\n').length;
+                     const wrapBonus = Math.ceil(text.length / 95); // Rough wrap est
+                     const termHeight = (Math.max(lines, wrapBonus) * LINE_HEIGHT) + 12; // + Header "Kondisi..."
+                     return termHeight + FOOTER_SIG_HEIGHT;
+                };
+
+                const FOOTER_HEIGHT = getFooterHeight();
+
+                let currentPage = {
+                    items: [],
+                    hasHeader: true,
+                    isLastPage: false,
+                    currentY: HEADER_HEIGHT_P1 + TABLE_HEADER_HEIGHT
+                };
+
+                items.forEach((item, index) => {
+                    // Calculate Item Height
+                    let descText = "";
+                    if (item.materialName !== undefined) {
+                        descText = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
+                    } else {
+                        descText = item.desc || "";
+                    }
+
+                    const lines = descText.split('\n').length;
+                    const wrapBonus = Math.ceil(descText.length / 60); // Column width ~70mm -> ~50-60 chars
+                    const effectiveLines = Math.max(lines, wrapBonus);
+
+                    const itemHeight = (effectiveLines * LINE_HEIGHT) + ROW_PAD + 4; // +4 for internal cell padding
+
+                    // Check if fits
+                    if (currentPage.currentY + itemHeight > CONTENT_HEIGHT) {
+                        // Push current
+                        pages.push(currentPage);
+
+                        // Start new
+                        currentPage = {
+                            items: [],
+                            hasHeader: false,
+                            isLastPage: false,
+                            currentY: TABLE_HEADER_HEIGHT // Table Header only
+                        };
+                    }
+
+                    currentPage.items.push(item);
+                    currentPage.currentY += itemHeight;
+                });
+
+                // Check Footer
+                if (currentPage.currentY + FOOTER_HEIGHT > CONTENT_HEIGHT) {
+                    // Push current
+                    pages.push(currentPage);
+
+                    // New page for Footer
+                    pages.push({
+                        items: [],
+                        hasHeader: false,
                         isLastPage: true,
-                        startIdx: 0,
-                        hasHeader: true
-                    }];
+                        currentY: 0
+                    });
                 } else {
-                    // Split into 2 Pages (Visual Only)
-                    const page1Items = formData.items.slice(0, ITEMS_PER_PAGE_1);
-                    const page2Items = formData.items.slice(ITEMS_PER_PAGE_1);
-
-                    return [
-                        { items: page1Items, isLastPage: false, startIdx: 0, hasHeader: true },
-                        { items: page2Items, isLastPage: true, startIdx: ITEMS_PER_PAGE_1, hasHeader: false }
-                    ];
+                    currentPage.isLastPage = true;
+                    pages.push(currentPage);
                 }
+
+                // Edge case handling if no items exist (show at least one page)
+                if (pages.length === 0) {
+                     pages.push({ items: [], hasHeader: true, isLastPage: true });
+                }
+
+                return pages;
             };
 
             // RENDER LOGIC
@@ -1078,6 +1190,9 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                 <h1 className="font-bold text-xl hidden sm:block">Multibangun Offer System v2.1</h1>
                                 <button onClick={() => setShowSaved(true)} className="ml-4 flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-blue-200">
                                     <Icons.FileText size={14}/> Data Tersimpan
+                                </button>
+                                <button onClick={handleNewQuotation} className="ml-2 flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-green-200">
+                                    <Icons.Plus size={14}/> Buat Baru
                                 </button>
                             </div>
                             <div className="flex items-center gap-4">
