@@ -79,9 +79,9 @@
         }
 
         .a4-content {
-            padding: 45mm 23mm 20mm 23mm;
-            /* Top margin for letterhead */
-            min-height: calc(297mm - 65mm);
+            padding: 30mm 12.5mm 30mm 15mm;
+            /* Top: 30mm, Right: 12.5mm, Bottom: 30mm, Left: 15mm */
+            min-height: calc(297mm - 60mm);
         }
 
         .a4-bg {
@@ -1041,9 +1041,10 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                 addBackground();
 
-                const marginTop = 42.5;
-                const marginLeft = 23;
-                const marginRight = 23;
+                const marginTop = 30;      // 3cm from top
+                const marginLeft = 15;     // 1.5cm from left
+                const marginRight = 12.5;  // 1.25cm from right
+                const marginBottom = 30;   // 3cm from bottom
 
                 let yPos = marginTop;
 
