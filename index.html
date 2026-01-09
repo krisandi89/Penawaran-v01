@@ -79,9 +79,9 @@
         }
 
         .a4-content {
-            padding: 30mm 12.5mm 30mm 15mm;
-            /* Top: 30mm, Right: 12.5mm, Bottom: 30mm, Left: 15mm */
-            min-height: calc(297mm - 60mm);
+            padding: 40mm 12.5mm 35mm 15mm;
+            /* Top: 40mm (4cm), Right: 12.5mm, Bottom: 35mm (3.5cm), Left: 15mm */
+            min-height: calc(297mm - 75mm);
         }
 
         .a4-bg {
@@ -349,8 +349,8 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                             {/* Content */}
                             <div className="a4-content relative z-10">
-                                {/* Header Info */}
-                                <div className="flex justify-between mb-4">
+                                {/* Header Info - Letter Number and Date */}
+                                <div className="mb-6">
                                     <div>
                                         <span>No. </span>
                                         <span
@@ -362,7 +362,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                             {formData.noSurat}
                                         </span>
                                     </div>
-                                    <div>
+                                    <div className="mt-1">
                                         <span>Jakarta, {dateStr}</span>
                                     </div>
                                 </div>
@@ -1041,20 +1041,23 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                 addBackground();
 
-                const marginTop = 30;      // 3cm from top
+                const marginTop = 40;      // 4cm from top
                 const marginLeft = 15;     // 1.5cm from left
                 const marginRight = 12.5;  // 1.25cm from right
-                const marginBottom = 30;   // 3cm from bottom
+                const marginBottom = 35;   // 3.5cm from bottom
 
                 let yPos = marginTop;
 
                 doc.setTextColor(0);
 
-                const dateStr = new Date(formData.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                doc.text(`Jakarta, ${dateStr}`, 140, yPos);
-
+                // Letter number
                 doc.text(`No: ${formData.noSurat}`, marginLeft, yPos);
-                yPos += 10;
+                yPos += 5;
+
+                // Date below letter number
+                const dateStr = new Date(formData.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                doc.text(`Jakarta, ${dateStr}`, marginLeft, yPos);
+                yPos += 10; // Spacing after date
 
                 doc.text("Kepada Yth:", marginLeft, yPos);
                 yPos += 5;
@@ -1236,14 +1239,18 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 doc.text("Hormat kami,", marginLeft, yPos);
 
                 if (senderProfile.signature && signDims) {
-                    doc.addImage(senderProfile.signature, null, marginLeft, yPos + 4, signDims.width, signDims.height);
+                    // Reduce signature size by 20%
+                    const sigWidth = signDims.width * 0.8;
+                    const sigHeight = signDims.height * 0.8;
+                    doc.addImage(senderProfile.signature, null, marginLeft, yPos + 3, sigWidth, sigHeight);
                 } else if (senderProfile.signature) {
-                    doc.addImage(senderProfile.signature, null, marginLeft, yPos + 4, 40, 25);
+                    // Default signature size reduced by 20%: 40*0.8=32, 25*0.8=20
+                    doc.addImage(senderProfile.signature, null, marginLeft, yPos + 3, 32, 20);
                 } else {
-                    doc.text("(...........................)", marginLeft, yPos + 25);
+                    doc.text("(...........................)", marginLeft, yPos + 20);
                 }
 
-                yPos += 35;
+                yPos += 25; // Reduced spacing between Hormat kami and name
                 doc.setFont("helvetica", "bold");
                 doc.text(senderProfile.name || "[Nama Pengirim]", marginLeft, yPos);
 
