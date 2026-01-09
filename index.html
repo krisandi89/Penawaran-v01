@@ -1,76 +1,177 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multibangun Offer System v2</title>
-    
+    <title>Multibangun Offer System v3.0</title>
+
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
+
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- jsPDF & AutoTable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* Mengatur Font Utama ke Arial */
-        body { 
-            font-family: Arial, Helvetica, sans-serif; 
-            background-color: #f3f4f6; 
+        /* Font Arial 11pt untuk semua elemen */
+        body,
+        input,
+        textarea,
+        select,
+        button,
+        table,
+        th,
+        td,
+        div,
+        span,
+        p,
+        label {
+            font-family: Arial, Helvetica, sans-serif !important;
+            font-size: 11pt;
         }
-        
-        .preview-paper {
-            background: white;
+
+        body {
+            background-color: #f3f4f6;
+        }
+
+        /* Override Tailwind text sizes to maintain 11pt base */
+        .text-xs {
+            font-size: 9pt !important;
+        }
+
+        .text-sm {
+            font-size: 10pt !important;
+        }
+
+        .text-base {
+            font-size: 11pt !important;
+        }
+
+        .text-lg {
+            font-size: 12pt !important;
+        }
+
+        .text-xl {
+            font-size: 14pt !important;
+        }
+
+        .text-2xl {
+            font-size: 16pt !important;
+        }
+
+        /* Editable Preview Styles */
+        .a4-paper {
             width: 210mm;
             min-height: 297mm;
-            padding: 0; /* Padding dihandle manual agar background full */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            color: #000;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             position: relative;
-            overflow: hidden;
+            margin: 20px auto;
+            padding: 0;
         }
 
-        /* Area Teks di dalam kertas (Safe Zone) */
-        .paper-content {
-            position: relative;
-            z-index: 10;
-            padding-top: 45mm;    /* Margin Atas untuk menghindari Header Kop */
-            padding-bottom: 30mm; /* Margin Bawah untuk menghindari Footer */
-            padding-left: 20mm;
-            padding-right: 20mm;
-            font-size: 11pt;      /* Ukuran Font 11 */
-            line-height: 1.4;
+        .a4-content {
+            padding: 45mm 23mm 20mm 23mm;
+            /* Top margin for letterhead */
+            min-height: calc(297mm - 65mm);
         }
 
-        .paper-background {
+        .a4-bg {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             z-index: 0;
+            pointer-events: none;
+        }
+
+        .a4-bg img {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
         }
 
-        @media screen and (max-width: 768px) {
-            .preview-paper { width: 100%; }
+        .editable-field {
+            outline: none;
+            border-bottom: 1px dashed #ccc;
+            min-width: 50px;
+            padding: 2px 4px;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+
+        .editable-field:hover {
+            background: #fff9e6;
+            border-bottom-color: #f59e0b;
+        }
+
+        .editable-field:focus {
+            background: #fef3c7;
+            border-bottom: 2px solid #f59e0b;
+        }
+
+        .editable-block {
+            outline: none;
+            border: 1px dashed transparent;
+            padding: 4px;
+            transition: all 0.2s;
+        }
+
+        .editable-block:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .editable-block:focus {
+            border-color: #2563eb;
+            background: #dbeafe;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-size: 11pt;
+        }
+
+        .preview-table th {
+            background: #f8f8f8;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .preview-table td:first-child {
+            text-align: left;
+        }
+
+        .preview-table td:not(:first-child) {
+            text-align: center;
         }
     </style>
 </head>
+
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
-        // --- ICONS (MANUAL DEFINITION) ---
+        // --- ICONS ---
         const Icon = ({ path, size = 20, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {path}
@@ -78,32 +179,19 @@
         );
 
         const Icons = {
-            FileText: (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>} />,
-            Settings: (props) => <Icon {...props} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />,
-            LogOut: (props) => <Icon {...props} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>} />,
-            Printer: (props) => <Icon {...props} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>} />,
-            Plus: (props) => <Icon {...props} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />,
-            Trash2: (props) => <Icon {...props} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />
+            FileText: (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></>} />,
+            Settings: (props) => <Icon {...props} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></>} />,
+            Printer: (props) => <Icon {...props} path={<><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></>} />,
+            Plus: (props) => <Icon {...props} path={<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>} />,
+            Trash2: (props) => <Icon {...props} path={<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>} />,
+            Edit: (props) => <Icon {...props} path={<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></>} />
         };
 
-        // --- DATA DEFAULT ---
-
-        const USERS_DEFAULT = [
-            { id: 1, name: "Ir. Nuruzzaman", title: "Technical & Marketing Manager", pin: "1234" },
-            { id: 2, name: "Krisandi", title: "Design & Project Manager", pin: "1234" },
-            { id: 3, name: "Admin Penawaran", title: "Admin Staff", pin: "1234" },
-            { id: 4, name: "User 4", title: "Marketing", pin: "1234" },
-            { id: 5, name: "User 5", title: "Marketing", pin: "1234" }
-        ];
-
-        const TEMPLATES = {
-            multiblock: {
-                title: "MULTIBlock Retaining Wall System",
-                items: [
-                    { desc: "Material + Pekerjaan Pemasangan: MULTIblock Retaining Wall System", unit: "m2", qty: 450, price: 2400000 }
-                ],
-                terms: `Kondisi Penawaran:
-- Harga franco lokasi proyek (sesuai input di atas).
+        // --- TEMPLATE SYARAT & KONDISI ---
+        const TERMS_TEMPLATES = {
+            retaining: {
+                label: "Retaining Wall",
+                terms: `- Harga franco lokasi proyek (sesuai input di atas).
 - Harga belum termasuk PPN 11%.
 - Harga tidak termasuk persiapan lahan lokasi, perbaikan tanah pondasi.
 - Harga tidak termasuk pekerjaan tanah galian, timbunan dan pemadatan.
@@ -116,111 +204,384 @@ Pembayaran:
 - Penawaran berlaku 14 hari.`
             },
             material: {
-                title: "Penawaran Material Geomembrane",
-                items: [
-                    { desc: "Material Geomembrane HDPE (Tebal sesuai request)", unit: "m2", qty: 1000, price: 45000 }
-                ],
-                terms: `Syarat dan Kondisi:
-- Harga Loco Gudang (Bitung / Tangerang).
-- Harga belum termasuk PPN 11%.
-- Harga tidak termasuk biaya pengiriman (kecuali tercantum di tabel).
-- Penurunan barang (Unloading) di lokasi menjadi tanggung jawab Pembeli.
-- Klaim kekurangan/kerusakan material maksimal 2x24 jam setelah barang diterima.
-- Waktu pengiriman: 3-5 hari kerja setelah pembayaran lunas (subject to stock).
-
-Pembayaran:
-- Cash Before Delivery (CBD).`
+                label: "Material",
+                terms: `• Harga locco Gudang PT. Multibangun Rekatama Patria di Bitung, Tangerang.
+• Harga Material untuk keperluan proyek [NAMA_PROYEK].
+• Material Ready Stock.
+• Harga Material belum termasuk PPN 11%.
+• Pembayaran: Cash in Advance.
+• Pengambilan Material setelah Purchase Order dan pembayaran diterima.
+• Penawaran harga ini berlaku sampai dengan tanggal [TANGGAL_BERLAKU] 2026.`
             },
             install: {
-                title: "Penawaran Geomembrane + Pemasangan",
-                items: [
-                    { desc: "Material Geomembrane HDPE", unit: "m2", qty: 1000, price: 45000 },
-                    { desc: "Jasa Instalasi Geomembrane", unit: "m2", qty: 1000, price: 15000 },
-                    { desc: "Biaya Mob-Demob & Akomodasi", unit: "Ls", qty: 1, price: 5000000 }
-                ],
-                terms: `Lingkup Pekerjaan & Syarat:
-- Harga Franco Proyek (dengan asumsi akses jalan layak untuk truk).
-- Pihak Pembeli WAJIB menyediakan:
-  1. Lahan yang sudah siap pasang (rata, padat, bebas benda tajam, kering).
-  2. Listrik kerja / Genset min. 5-10 kVA + BBM di lokasi.
-  3. Tempat tinggal (Mess) yang layak untuk tim instalasi.
-  4. Makan & Minum untuk tim instalasi selama pekerjaan.
-  5. Pekerja kasar (unskilled labor) untuk bantu tarik material.
-  6. Keamanan material dan alat kerja di lokasi.
-- Pekerjaan Dewatering (pengeringan air) tidak termasuk (jika ada genangan).
-- Pekerjaan Galian parit angkur (anchor trench) tidak termasuk.
+                label: "Material + Instalasi",
+                terms: `• Harga Material Locco Gudang Multibangun di Bitung, Tangerang.
+• Harga Material dan Instalasi belum termasuk PPN 11%.
+• Harga Instalasi tidak termasuk genset 10 kVA & dewatering pump.
+• Harga Instalasi tidak termasuk persiapan lahan dan pekerjaan tanah seperti penggalian, penimbunan dan pembuatan angkur.
+• Harga Instalasi tidak termasuk Unskilled labor (kuli gelar) dan besi angkur.
+• Harga Instalasi tidak termasuk peralatan tambahan seperti plat strip, baut, dll bila diperlukan.
+• Harga Instalasi tidak termasuk biaya langsir Material.
+• Harga Instalasi sudah termasuk akomodasi, transportasi, penginapan dan tes kesehatan untuk installer.
+• Harga Instalasi dengan asumsi pekerjaan dilakukan bukan pada musim hujan.
+• Harga Material dan Instalasi di atas sesuai dengan kebutuhan volume XXX m².
 
-Pembayaran:
-- Material: 100% Cash Before Delivery.
-- Jasa: DP 50%, Pelunasan 50% setelah Berita Acara Selesai Pekerjaan.`
+Metode Pembayaran
+o Material: Cash in Advance.
+o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan secara bertahap.
+• Pengambilan Material setelah Purchase Order dan pembayaran diterima.
+• Material Ready Stock.
+• Penawaran harga ini berlaku sampai dengan tanggal [TANGGAL_BERLAKU] 2026.`
             }
+        };
+
+        // --- DEFAULT SENDER PROFILE ---
+        const DEFAULT_PROFILE = {
+            name: "",
+            title: "",
+            phone: "",
+            signature: null
         };
 
         // --- COMPONENTS ---
 
-        const LoginScreen = ({ users, onLogin }) => {
-            const [selectedUser, setSelectedUser] = useState(null);
-            const [pin, setPin] = useState("");
-            const [error, setError] = useState("");
-
-            const handleLogin = () => {
-                if (pin === selectedUser.pin) {
-                    onLogin(selectedUser);
-                } else {
-                    setError("PIN Salah!");
-                }
-            };
-
+        const PreviewModal = ({ isOpen, onClose, pdfUrl }) => {
+            if (!isOpen) return null;
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-800 font-arial">
-                    <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
-                        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Login Multibangun</h2>
-                        {!selectedUser ? (
-                            <div className="grid grid-cols-1 gap-3">
-                                {users.map(u => (
-                                    <button key={u.id} 
-                                        onClick={() => setSelectedUser(u)}
-                                        className="flex items-center p-4 border rounded hover:bg-blue-50 transition text-left"
-                                    >
-                                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mr-4">
-                                            {u.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold">{u.name}</div>
-                                            <div className="text-xs text-gray-500">{u.title}</div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : (
-                            <div>
-                                <div className="mb-4 text-center">
-                                    <span className="font-bold text-lg">{selectedUser.name}</span>
-                                    <button onClick={() => { setSelectedUser(null); setPin(""); setError(""); }} className="block mx-auto text-sm text-blue-500 hover:underline">Ganti User</button>
-                                </div>
-                                <input 
-                                    type="password" 
-                                    className="w-full p-3 border rounded mb-2 text-center text-2xl tracking-widest"
-                                    placeholder="PIN"
-                                    value={pin}
-                                    onChange={(e) => setPin(e.target.value)}
-                                    maxLength={4}
-                                />
-                                {error && <p className="text-red-500 text-sm text-center mb-2">{error}</p>}
-                                <button onClick={handleLogin} className="w-full bg-blue-600 text-white p-3 rounded font-bold hover:bg-blue-700">
-                                    MASUK
-                                </button>
-                            </div>
-                        )}
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full h-full max-w-5xl flex flex-col">
+                        <div className="flex justify-between items-center p-4 border-b">
+                            <h2 className="text-xl font-bold">Preview PDF (Final Output)</h2>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black text-2xl">&times;</button>
+                        </div>
+                        <div className="flex-1 bg-gray-100 p-4">
+                            <iframe src={pdfUrl} className="w-full h-full border rounded shadow" title="PDF Preview"></iframe>
+                        </div>
                     </div>
                 </div>
             );
         };
 
-        const SettingsModal = ({ isOpen, onClose, users, setUsers, setAssets, assets }) => {
+        // --- EDITABLE PREVIEW MODAL ---
+        const EditablePreviewModal = ({
+            isOpen,
+            onClose,
+            formData,
+            setFormData,
+            assets,
+            senderProfile,
+            termsTemplate,
+            onGeneratePDF,
+            formatRupiah,
+            calculateTotal
+        }) => {
             if (!isOpen) return null;
 
-            const handleImageUpload = (e, key, userId = null) => {
+            const dateStr = new Date(formData.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            // Calculate valid until date (14 days from surat date)
+            const dateObj = new Date(formData.date);
+            dateObj.setDate(dateObj.getDate() + 14);
+            const validUntil = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+
+            // Process terms with placeholders
+            let processedTerms = formData.terms || '';
+            processedTerms = processedTerms.replace(/\[NAMA_PROYEK\]/g, formData.projectName || "....................");
+            processedTerms = processedTerms.replace(/\[TANGGAL_BERLAKU\]/g, validUntil);
+
+            const handleFieldChange = (field, value) => {
+                setFormData(prev => ({ ...prev, [field]: value }));
+            };
+
+            const handleItemChange = (index, field, value) => {
+                const newItems = [...formData.items];
+                if (field === 'qty' || field === 'price') {
+                    newItems[index][field] = Number(value) || 0;
+                } else {
+                    newItems[index][field] = value;
+                }
+                setFormData(prev => ({ ...prev, items: newItems }));
+            };
+
+            const addNewItem = () => {
+                const newItem = { desc: "Item baru", unit: "Ls", qty: 1, price: 0 };
+                setFormData(prev => ({ ...prev, items: [...prev.items, newItem] }));
+            };
+
+            const removeItem = (index) => {
+                const newItems = formData.items.filter((_, i) => i !== index);
+                setFormData(prev => ({ ...prev, items: newItems }));
+            };
+
+            return (
+                <div className="fixed inset-0 bg-gray-800 bg-opacity-90 z-50 overflow-auto">
+                    {/* Header Bar */}
+                    <div className="sticky top-0 bg-white shadow-lg z-10 px-6 py-3 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <h2 className="text-lg font-bold text-gray-800">✏️ Preview & Edit Surat Penawaran</h2>
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Klik pada teks untuk mengedit</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={onGeneratePDF}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2"
+                            >
+                                <Icons.Printer size={18} /> Generate PDF
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium"
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* A4 Paper Container */}
+                    <div className="py-8 px-4">
+                        <div className="a4-paper">
+                            {/* Background Image */}
+                            {assets.background && (
+                                <div className="a4-bg">
+                                    <img src={assets.background} alt="Background" />
+                                </div>
+                            )}
+
+                            {/* Content */}
+                            <div className="a4-content relative z-10">
+                                {/* Header Info */}
+                                <div className="flex justify-between mb-4">
+                                    <div>
+                                        <span>No. </span>
+                                        <span
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            className="editable-field font-bold"
+                                            onBlur={(e) => handleFieldChange('noSurat', e.target.innerText)}
+                                        >
+                                            {formData.noSurat}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span>Jakarta, {dateStr}</span>
+                                    </div>
+                                </div>
+
+                                {/* Client Info */}
+                                <div className="mb-4">
+                                    <div className="mb-1"><u>Kepada Yth</u>:</div>
+                                    <div
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        className="editable-field font-bold text-red-600"
+                                        style={{ textTransform: 'uppercase' }}
+                                        onBlur={(e) => handleFieldChange('clientName', e.target.innerText)}
+                                    >
+                                        {formData.clientName || "NAMA PERUSAHAAN/INSTITUSI"}
+                                    </div>
+                                    <div
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        className="editable-block mt-1"
+                                        onBlur={(e) => handleFieldChange('clientAddress', e.target.innerText)}
+                                    >
+                                        {formData.clientAddress || "Nama Gedung\nNama Jalan, Nomor\nKecamatan, Kelurahan\nKota – PROVINSI HURUF BESAR SEMUA, KODE POS"}
+                                    </div>
+                                </div>
+
+                                {/* UP, Phone, Email */}
+                                <div className="mb-4">
+                                    <div className="flex gap-2">
+                                        <span className="w-16">Up</span>
+                                        <span>:</span>
+                                        <span>Bapak/Ibu </span>
+                                        <span
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            className="editable-field"
+                                            onBlur={(e) => handleFieldChange('clientUp', e.target.innerText)}
+                                        >
+                                            {formData.clientUp || "[Nama UP]"}
+                                        </span>
+                                    </div>
+                                    {formData.clientPhone && (
+                                        <div className="flex gap-2">
+                                            <span className="w-16"><u>Telepon</u></span>
+                                            <span>:</span>
+                                            <span
+                                                contentEditable
+                                                suppressContentEditableWarning
+                                                className="editable-field text-red-600"
+                                                onBlur={(e) => handleFieldChange('clientPhone', e.target.innerText)}
+                                            >
+                                                {formData.clientPhone}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {formData.clientEmail && (
+                                        <div className="flex gap-2">
+                                            <span className="w-16">Email</span>
+                                            <span>:</span>
+                                            <span
+                                                contentEditable
+                                                suppressContentEditableWarning
+                                                className="editable-field text-red-600"
+                                                onBlur={(e) => handleFieldChange('clientEmail', e.target.innerText)}
+                                            >
+                                                {formData.clientEmail}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Hal & Proyek */}
+                                <div className="mb-4">
+                                    <div className="flex gap-2">
+                                        <span className="w-16">Hal</span>
+                                        <span>:</span>
+                                        <span className="font-bold"><u>Penawaran Harga Material</u></span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="w-16"><u>Proyek</u></span>
+                                        <span>:</span>
+                                        <span
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            className="editable-field text-red-600"
+                                            onBlur={(e) => handleFieldChange('projectName', e.target.innerText)}
+                                        >
+                                            {formData.projectName || "[Nama Proyek dan Lokasi]"}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Intro */}
+                                <div className="mb-4">
+                                    <div><u>Dengan hormat</u>,</div>
+                                    <div className="mt-2 text-justify">
+                                        <u>Menindaklanjuti permintaan penawaran harga resmi</u> kami <u>untuk proyek tersebut</u>, maka bersama ini saya kirimkan harga produk kami sebagai berikut:
+                                    </div>
+                                </div>
+
+                                {/* Items Table */}
+                                <div className="mb-4">
+                                    <table className="preview-table">
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: '40%' }}>Material</th>
+                                                <th style={{ width: '15%' }}>Kuantitas</th>
+                                                <th style={{ width: '22%' }}>Harga Satuan (per roll/m²)</th>
+                                                <th style={{ width: '23%' }}>Total Harga</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {formData.items.map((item, idx) => (
+                                                <tr key={idx}>
+                                                    <td className="align-top">
+                                                        <div
+                                                            contentEditable
+                                                            suppressContentEditableWarning
+                                                            className="editable-block whitespace-pre-wrap"
+                                                            onBlur={(e) => handleItemChange(idx, 'desc', e.target.innerText)}
+                                                        >
+                                                            {item.desc}
+                                                        </div>
+                                                    </td>
+                                                    <td className="text-center align-middle">
+                                                        <span
+                                                            contentEditable
+                                                            suppressContentEditableWarning
+                                                            className="editable-field text-red-600"
+                                                            onBlur={(e) => handleItemChange(idx, 'qty', e.target.innerText)}
+                                                        >
+                                                            {item.qty}
+                                                        </span>
+                                                        <span> {item.unit}</span>
+                                                    </td>
+                                                    <td className="text-center align-middle">
+                                                        <span>Rp</span>
+                                                        <span
+                                                            contentEditable
+                                                            suppressContentEditableWarning
+                                                            className="editable-field text-red-600"
+                                                            onBlur={(e) => handleItemChange(idx, 'price', e.target.innerText.replace(/[^\d]/g, ''))}
+                                                        >
+                                                            {item.price.toLocaleString('id-ID')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="text-center align-middle">
+                                                        <span className="text-red-600 font-bold">
+                                                            {formatRupiah(item.qty * item.price)}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => removeItem(idx)}
+                                                            className="ml-2 text-red-400 hover:text-red-600 text-xs"
+                                                            title="Hapus item"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            <tr>
+                                                <td colSpan="3" className="text-right font-bold">Total</td>
+                                                <td className="text-center font-bold text-red-600">
+                                                    {formatRupiah(calculateTotal())}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <button
+                                        onClick={addNewItem}
+                                        className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 mt-2"
+                                    >
+                                        + Tambah Item
+                                    </button>
+                                </div>
+
+                                {/* Terms */}
+                                <div className="mb-4">
+                                    <div className="font-bold mb-2"><u>Kondisi Penawaran</u>:</div>
+                                    <div
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        className="editable-block whitespace-pre-wrap"
+                                        onBlur={(e) => handleFieldChange('terms', e.target.innerText)}
+                                    >
+                                        {processedTerms}
+                                    </div>
+                                </div>
+
+                                {/* Closing */}
+                                <div className="mb-6">
+                                    <div className="text-justify">
+                                        Demikian penawaran harga ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.
+                                    </div>
+                                </div>
+
+                                {/* Signature */}
+                                <div className="mt-8">
+                                    <div>Hormat kami,</div>
+                                    <div className="mt-2 h-20">
+                                        {senderProfile.signature && (
+                                            <img src={senderProfile.signature} alt="Signature" className="h-16" />
+                                        )}
+                                    </div>
+                                    <div className="font-bold"><u>{senderProfile.name || "[Nama Pengirim]"}</u></div>
+                                    <div className="italic">{senderProfile.title || "[Jabatan]"}</div>
+                                    <div>{senderProfile.phone || ""}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const SettingsModal = ({ isOpen, onClose, senderProfile, setSenderProfile, assets, setAssets }) => {
+            if (!isOpen) return null;
+
+            const handleImageUpload = (e, key) => {
                 const file = e.target.files[0];
                 if (!file) return;
 
@@ -228,63 +589,103 @@ Pembayaran:
                 reader.onloadend = () => {
                     if (key === 'background') {
                         setAssets(prev => ({ ...prev, background: reader.result }));
-                    } else if (key === 'sign' && userId) {
-                        const newUsers = users.map(u => 
-                            u.id === userId ? { ...u, signature: reader.result } : u
-                        );
-                        setUsers(newUsers);
-                        localStorage.setItem('mb_users_v2', JSON.stringify(newUsers));
+                    } else if (key === 'background2') {
+                        setAssets(prev => ({ ...prev, background2: reader.result }));
+                    } else if (key === 'signature') {
+                        const updated = { ...senderProfile, signature: reader.result };
+                        setSenderProfile(updated);
+                        localStorage.setItem('mb_sender_profile', JSON.stringify(updated));
                     }
                 };
                 reader.readAsDataURL(file);
+            };
+
+            const updateProfile = (field, value) => {
+                const updated = { ...senderProfile, [field]: value };
+                setSenderProfile(updated);
+                localStorage.setItem('mb_sender_profile', JSON.stringify(updated));
             };
 
             return (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold">Pengaturan Aset & User</h2>
-                            <button onClick={onClose} className="text-gray-500 hover:text-black">X</button>
+                            <h2 className="text-xl font-bold">Pengaturan</h2>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black text-2xl">&times;</button>
                         </div>
 
-                        {/* FULL BACKGROUND */}
-                        <div className="mb-8 border-b pb-6">
-                            <h3 className="font-bold mb-2 text-blue-800">1. Full Background (Kop + Watermark)</h3>
-                            <p className="text-sm text-gray-500 mb-2">
-                                Upload gambar A4 FULL (Header, Watermark Logo, Footer) format JPG/PNG. 
-                                <br/>Gambar ini akan menjadi latar belakang di setiap halaman.
-                            </p>
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'background')} className="mb-2" />
-                            {assets.background && (
-                                <div className="mt-2 border p-2 bg-gray-50">
-                                    <p className="text-xs mb-1 text-green-600 font-bold">Background Terpasang:</p>
-                                    <img src={assets.background} alt="Background Preview" className="h-40 border mx-auto shadow" />
+                        {/* SENDER PROFILE */}
+                        <div className="mb-6 border-b pb-6">
+                            <h3 className="font-bold mb-4 text-blue-800">1. Profil Pengirim</h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Nama Lengkap</label>
+                                    <input
+                                        type="text"
+                                        className="w-full border p-2 rounded"
+                                        value={senderProfile.name}
+                                        onChange={(e) => updateProfile('name', e.target.value)}
+                                        placeholder="Contoh: Ir. Budi Santoso"
+                                    />
                                 </div>
-                            )}
-                        </div>
-
-                        {/* TANDA TANGAN USERS */}
-                        <div>
-                            <h3 className="font-bold mb-4 text-blue-800">2. Tanda Tangan & Cap User</h3>
-                            <p className="text-sm text-gray-500 mb-4">Upload gambar PNG Transparan untuk tanda tangan masing-masing user.</p>
-                            
-                            <div className="space-y-4">
-                                {users.map(user => (
-                                    <div key={user.id} className="flex flex-col sm:flex-row gap-4 items-center border p-3 rounded">
-                                        <div className="flex-1">
-                                            <div className="font-bold">{user.name}</div>
-                                            <div className="text-xs text-gray-500">{user.title}</div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'sign', user.id)} className="text-sm w-full" />
-                                        </div>
-                                        <div className="w-24 h-16 border bg-gray-50 flex items-center justify-center overflow-hidden">
-                                            {user.signature ? (
-                                                <img src={user.signature} alt="Sign" className="max-w-full max-h-full" />
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Jabatan</label>
+                                    <input
+                                        type="text"
+                                        className="w-full border p-2 rounded"
+                                        value={senderProfile.title}
+                                        onChange={(e) => updateProfile('title', e.target.value)}
+                                        placeholder="Contoh: Project Manager"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">No. Telepon</label>
+                                    <input
+                                        type="text"
+                                        className="w-full border p-2 rounded"
+                                        value={senderProfile.phone}
+                                        onChange={(e) => updateProfile('phone', e.target.value)}
+                                        placeholder="Contoh: 0812-3456-7890"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Tanda Tangan (Gambar PNG Transparan)</label>
+                                    <div className="flex gap-4 items-center">
+                                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'signature')} className="text-sm flex-1" />
+                                        <div className="w-32 h-20 border bg-gray-50 flex items-center justify-center overflow-hidden">
+                                            {senderProfile.signature ? (
+                                                <img src={senderProfile.signature} alt="Sign" className="max-w-full max-h-full" />
                                             ) : <span className="text-xs text-gray-400">No Img</span>}
                                         </div>
                                     </div>
-                                ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* PAGE BACKGROUNDS */}
+                        <div className="mb-6 border-b pb-6">
+                            <h3 className="font-bold mb-2 text-blue-800">2. Kop Surat / Background</h3>
+
+                            <div className="mb-4">
+                                <p className="font-bold mb-1">Kop Halaman 1</p>
+                                <p className="text-xs text-gray-500 mb-2">Upload gambar A4 FULL (Header, Footer, Watermark).</p>
+                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'background')} className="mb-2 text-sm" />
+                                {assets.background && (
+                                    <div className="mt-1 border p-1 bg-gray-50 inline-block">
+                                        <img src={assets.background} alt="BG1" className="h-20" />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <p className="font-bold mb-1">Kop Halaman 2+ (Optional)</p>
+                                <p className="text-xs text-gray-500 mb-2">Upload gambar A4 FULL untuk halaman berikutnya. Jika kosong, ikut Halaman 1.</p>
+                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'background2')} className="mb-2 text-sm" />
+                                {assets.background2 && (
+                                    <div className="mt-1 border p-1 bg-gray-50 inline-block">
+                                        <img src={assets.background2} alt="BG2" className="h-20" />
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -296,57 +697,246 @@ Pembayaran:
             );
         };
 
+        const SavedQuotationsModal = ({ isOpen, onClose, savedQuotations, onRetrieve, onDelete }) => {
+            if (!isOpen) return null;
+
+            const [searchTerm, setSearchTerm] = useState("");
+
+            const filteredQuotations = savedQuotations.filter(q =>
+                (q.noSurat || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (q.clientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (q.projectName || "").toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col">
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <div className="w-full max-w-lg">
+                                <input
+                                    type="text"
+                                    placeholder="Cari berdasarkan No. Surat, Proyek, atau Klien..."
+                                    className="w-full border p-2 rounded-lg"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black text-2xl ml-4">&times;</button>
+                        </div>
+
+                        <div className="flex-1 p-6 bg-gray-50 overflow-auto">
+                            <div className="bg-white border rounded-lg overflow-hidden">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
+                                        <tr>
+                                            <th className="p-4 text-left">No. Surat</th>
+                                            <th className="p-4 text-left">Proyek & Tipe</th>
+                                            <th className="p-4 text-left">Klien</th>
+                                            <th className="p-4 text-left">Tanggal</th>
+                                            <th className="p-4 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {filteredQuotations.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="p-8 text-center text-gray-400">Belum ada data tersimpan.</td>
+                                            </tr>
+                                        ) : (
+                                            filteredQuotations.map((q) => (
+                                                <tr key={q.id} className="hover:bg-gray-50">
+                                                    <td className="p-4">
+                                                        <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded font-mono font-bold text-xs">
+                                                            {q.noSurat}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="font-bold text-gray-800">{q.projectName}</div>
+                                                        <div className="text-xs text-blue-500 font-bold mt-1 uppercase">{q.termsType}</div>
+                                                    </td>
+                                                    <td className="p-4 font-medium text-gray-700">
+                                                        {q.clientName}
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="text-xs text-gray-500">
+                                                            {new Date(q.savedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 text-right flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => onRetrieve(q)}
+                                                            className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-xs font-bold flex items-center gap-1"
+                                                        >
+                                                            <Icons.FileText size={12} /> Ambil
+                                                        </button>
+                                                        <button
+                                                            onClick={() => onDelete(q.id)}
+                                                            className="text-red-400 hover:text-red-600 p-1"
+                                                        >
+                                                            <Icons.Trash2 size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             // STATE
-            const [currentUser, setCurrentUser] = useState(null);
-            const [users, setUsers] = useState(USERS_DEFAULT);
-            const [assets, setAssets] = useState({ background: null });
-            
-            const [tab, setTab] = useState('multiblock');
+            const [senderProfile, setSenderProfile] = useState(DEFAULT_PROFILE);
+            const [assets, setAssets] = useState({ background: null, background2: null });
+
             const [showSettings, setShowSettings] = useState(false);
+            const [showPreview, setShowPreview] = useState(false);
+            const [showSaved, setShowSaved] = useState(false);
+            const [showEditablePreview, setShowEditablePreview] = useState(false);
+            const [savedQuotations, setSavedQuotations] = useState([]);
+            const [pdfUrl, setPdfUrl] = useState(null);
+
+            // Terms Template Selection
+            const [termsTemplate, setTermsTemplate] = useState('material');
 
             // Form Data
             const [formData, setFormData] = useState({
-                noSurat: `001/MRP/PWRN/XII/${new Date().getFullYear()}`,
+                noSurat: `001/MRP/PWRN/I/${new Date().getFullYear()}`,
                 date: new Date().toISOString().split('T')[0],
                 clientName: "",
                 clientAddress: "",
                 clientUp: "",
+                clientPhone: "",
+                clientEmail: "",
                 projectName: "",
                 projectLocation: "",
                 items: [],
-                terms: ""
+                terms: TERMS_TEMPLATES.material.terms
             });
+
+            const [showClientPhone, setShowClientPhone] = useState(false);
+            const [showClientEmail, setShowClientEmail] = useState(false);
 
             // LOAD SAVED DATA
             useEffect(() => {
-                const savedUsers = localStorage.getItem('mb_users_v2');
-                const savedAssets = localStorage.getItem('mb_assets_v2');
-                
-                if (savedUsers) setUsers(JSON.parse(savedUsers));
-                if (savedAssets) setAssets(JSON.parse(savedAssets));
+                const savedProfile = localStorage.getItem('mb_sender_profile');
+                const savedAssets = localStorage.getItem('mb_assets_v3');
+                const savedQuots = localStorage.getItem('mb_saved_quotations_v3');
 
-                resetFormToTab('multiblock');
+                if (savedProfile) setSenderProfile(JSON.parse(savedProfile));
+                if (savedAssets) setAssets(JSON.parse(savedAssets));
+                if (savedQuots) setSavedQuotations(JSON.parse(savedQuots));
             }, []);
 
             // Save Assets when changed
             useEffect(() => {
-                if (assets.background) localStorage.setItem('mb_assets_v2', JSON.stringify(assets));
+                if (assets.background || assets.background2) {
+                    localStorage.setItem('mb_assets_v3', JSON.stringify(assets));
+                }
             }, [assets]);
 
-            const resetFormToTab = (selectedTab) => {
-                const template = TEMPLATES[selectedTab];
+            // Handle Terms Template Change
+            const handleTermsTemplateChange = (templateKey) => {
+                setTermsTemplate(templateKey);
                 setFormData(prev => ({
                     ...prev,
-                    items: [...template.items], 
-                    terms: template.terms
+                    terms: TERMS_TEMPLATES[templateKey].terms
                 }));
             };
 
-            const handleTabChange = (newTab) => {
-                if (confirm("Ganti Tab akan mereset Item dan Syarat Kondisi ke default. Lanjutkan?")) {
-                    setTab(newTab);
-                    resetFormToTab(newTab);
+            const handleNewQuotation = () => {
+                if (confirm("Buat penawaran baru? Data yang belum disimpan akan hilang.")) {
+                    setFormData({
+                        noSurat: `001/MRP/PWRN/I/${new Date().getFullYear()}`,
+                        date: new Date().toISOString().split('T')[0],
+                        clientName: "",
+                        clientAddress: "",
+                        clientUp: "",
+                        clientPhone: "",
+                        clientEmail: "",
+                        projectName: "",
+                        projectLocation: "",
+                        items: [],
+                        terms: TERMS_TEMPLATES[termsTemplate].terms
+                    });
+                    setShowClientPhone(false);
+                    setShowClientEmail(false);
+                    if (pdfUrl) {
+                        URL.revokeObjectURL(pdfUrl);
+                        setPdfUrl(null);
+                    }
+                }
+            };
+
+            const handleSaveQuotation = () => {
+                if (!formData.noSurat) {
+                    alert("Nomor Surat harus diisi!");
+                    return;
+                }
+
+                const existingIndex = savedQuotations.findIndex(q =>
+                    q.noSurat === formData.noSurat && q.clientName === formData.clientName
+                );
+
+                if (existingIndex !== -1) {
+                    if (confirm(`Data dengan Nomor Surat "${formData.noSurat}" sudah ada. Timpa?`)) {
+                        const updatedList = [...savedQuotations];
+                        updatedList[existingIndex] = {
+                            ...updatedList[existingIndex],
+                            savedAt: new Date().toISOString(),
+                            termsType: TERMS_TEMPLATES[termsTemplate].label,
+                            projectName: formData.projectName,
+                            formData: { ...formData },
+                            termsTemplate: termsTemplate
+                        };
+                        setSavedQuotations(updatedList);
+                        localStorage.setItem('mb_saved_quotations_v3', JSON.stringify(updatedList));
+                        alert("Data berhasil diperbarui!");
+                    }
+                    return;
+                }
+
+                const newQuotation = {
+                    id: Date.now(),
+                    savedAt: new Date().toISOString(),
+                    termsType: TERMS_TEMPLATES[termsTemplate].label,
+                    noSurat: formData.noSurat,
+                    clientName: formData.clientName,
+                    projectName: formData.projectName,
+                    formData: { ...formData },
+                    termsTemplate: termsTemplate
+                };
+
+                const updatedList = [newQuotation, ...savedQuotations];
+                setSavedQuotations(updatedList);
+                localStorage.setItem('mb_saved_quotations_v3', JSON.stringify(updatedList));
+                alert("Penawaran berhasil disimpan!");
+            };
+
+            const handleRetrieveQuotation = (q) => {
+                if (confirm(`Load penawaran ${q.noSurat}?`)) {
+                    setTermsTemplate(q.termsTemplate || 'material');
+                    const loadedData = q.formData;
+                    setFormData(loadedData);
+
+                    if (loadedData.clientPhone) setShowClientPhone(true);
+                    else setShowClientPhone(false);
+
+                    if (loadedData.clientEmail) setShowClientEmail(true);
+                    else setShowClientEmail(false);
+
+                    setShowSaved(false);
+                }
+            };
+
+            const handleDeleteQuotation = (id) => {
+                if (confirm("Hapus penyimpanan ini?")) {
+                    const updatedList = savedQuotations.filter(q => q.id !== id);
+                    setSavedQuotations(updatedList);
+                    localStorage.setItem('mb_saved_quotations_v3', JSON.stringify(updatedList));
                 }
             };
 
@@ -367,10 +957,13 @@ Pembayaran:
             };
 
             const addItem = () => {
-                setFormData({
-                    ...formData,
-                    items: [...formData.items, { desc: "Biaya Tambahan / Item Baru", unit: "Ls", qty: 1, price: 0 }]
-                });
+                const newItem = { desc: "", unit: "Ls", qty: 1, price: 0 };
+                setFormData({ ...formData, items: [...formData.items, newItem] });
+            };
+
+            const addMaterial = () => {
+                const newItem = { desc: "Material \nMerk: \nTipe: \nUkuran roll: ", unit: "m2", qty: 1, price: 0 };
+                setFormData({ ...formData, items: [...formData.items, newItem] });
             };
 
             const removeItem = (index) => {
@@ -378,247 +971,465 @@ Pembayaran:
                 setFormData({ ...formData, items: newItems });
             };
 
+            const handleBold = (index) => {
+                const textarea = document.getElementById(`item-desc-${index}`);
+                if (!textarea) return;
+
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+
+                if (start === end) return;
+
+                const newText = text.substring(0, start) + "*" + text.substring(start, end) + "*" + text.substring(end);
+                updateItem(index, 'desc', newText);
+
+                setTimeout(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, end + 1);
+                }, 0);
+            };
+
+            // Helper for drawing rich text in PDF
+            const drawRichLine = (doc, text, x, y, maxWidth) => {
+                const parts = text.split('*');
+                let currentX = x;
+                let currentY = y;
+
+                parts.forEach((part, idx) => {
+                    const isBold = idx % 2 === 1;
+                    doc.setFont("helvetica", isBold ? "bold" : "normal");
+
+                    const words = part.split(' ');
+                    words.forEach((word, wIdx) => {
+                        const wordWithSpace = word + (wIdx < words.length - 1 ? " " : "");
+                        const wWidth = doc.getTextWidth(wordWithSpace);
+
+                        if (currentX > 90) {
+                            currentY += 4;
+                            currentX = 25;
+                        }
+
+                        doc.text(wordWithSpace, currentX, currentY);
+                        currentX += wWidth;
+                    });
+                });
+
+                doc.__lastLineY = currentY + 4.5;
+            };
+
             // --- PDF GENERATION ---
-            const generatePDF = () => {
+            const createPDFDoc = (signDims = null) => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
-                
-                // Set FONT to Helvetica (Arial equivalent in PDF) and Size 11
+
                 doc.setFont("helvetica");
                 doc.setFontSize(11);
 
-                const width = doc.internal.pageSize.getWidth();
-                const height = doc.internal.pageSize.getHeight();
-
-                // Helper to add background to current page
                 const addBackground = () => {
-                    if (assets.background) {
-                        // Add Image at 0,0 with full width & height
-                        doc.addImage(assets.background, 'JPEG', 0, 0, 210, 297); 
+                    const pageNum = doc.internal.getNumberOfPages();
+                    let bgImg = assets.background;
+
+                    if (pageNum > 1) {
+                        bgImg = assets.background2 || assets.background;
+                    }
+
+                    if (bgImg) {
+                        doc.addImage(bgImg, 'JPEG', 0, 0, 210, 297);
                     }
                 };
 
-                // Add background to first page
                 addBackground();
 
-                // MARGINS (SAFE ZONE)
-                const marginTop = 45; // mm (Adjust based on your Kop Header Height)
-                const marginLeft = 20;
-                const marginRight = 20;
-                
+                const marginTop = 42.5;
+                const marginLeft = 23;
+                const marginRight = 23;
+
                 let yPos = marginTop;
 
-                // 2. HEADER INFO
                 doc.setTextColor(0);
-                
-                // Kanan: Tanggal
+
                 const dateStr = new Date(formData.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
                 doc.text(`Jakarta, ${dateStr}`, 140, yPos);
-                
-                // Kiri: Nomor & Tujuan
+
                 doc.text(`No: ${formData.noSurat}`, marginLeft, yPos);
                 yPos += 10;
-                
+
                 doc.text("Kepada Yth:", marginLeft, yPos);
-                yPos += 6; // Spacing sedikit lebih lebar utk font 11
+                yPos += 5;
                 doc.setFont("helvetica", "bold");
                 doc.text(formData.clientName || "Nama Klien Belum Diisi", marginLeft, yPos);
                 doc.setFont("helvetica", "normal");
-                yPos += 6;
+                yPos += 5;
                 const clientAddrLines = doc.splitTextToSize(formData.clientAddress || "", 80);
                 doc.text(clientAddrLines, marginLeft, yPos);
-                yPos += (clientAddrLines.length * 6) + 4;
-                
+                yPos += (clientAddrLines.length * 5) + 3;
+
                 doc.text(`Up: ${formData.clientUp}`, marginLeft, yPos);
-                yPos += 12;
+                yPos += 5;
 
-                // Hal & Proyek
-                doc.text(`Hal: Penawaran Harga ${tab === 'multiblock' ? 'Retaining Wall' : 'Geomembrane'}`, marginLeft, yPos);
-                yPos += 6;
-                doc.text(`Proyek: ${formData.projectName}`, marginLeft, yPos);
-                yPos += 12;
+                if (formData.clientPhone) {
+                    doc.text(`No. Telpon: ${formData.clientPhone}`, marginLeft, yPos);
+                    yPos += 5;
+                }
+                if (formData.clientEmail) {
+                    doc.text(`Email: ${formData.clientEmail}`, marginLeft, yPos);
+                    yPos += 5;
+                }
 
-                // Pembuka
+                yPos += 5;
+
                 doc.text("Dengan hormat,", marginLeft, yPos);
-                yPos += 6;
-                const intro = `Sehubungan dengan kebutuhan proyek ${formData.projectName}, berikut kami sampaikan penawaran harga terbaik kami:`;
+                yPos += 5;
+                const intro = `Sehubungan dengan kebutuhan proyek ${formData.projectName}, berikut kami sampaikan penawaran harga:`;
                 const introLines = doc.splitTextToSize(intro, 170);
                 doc.text(introLines, marginLeft, yPos);
-                yPos += (introLines.length * 6) + 4;
+                yPos += (introLines.length * 5) + 4;
 
-                // 3. TABEL ITEM
-                const tableBody = formData.items.map(item => [
-                    item.desc,
-                    item.qty,
-                    item.unit,
-                    new Intl.NumberFormat('id-ID').format(item.price),
-                    new Intl.NumberFormat('id-ID').format(item.qty * item.price)
-                ]);
+                // TABLE
+                const tableBody = formData.items.map(item => {
+                    return [
+                        item.desc,
+                        `${item.qty} ${item.unit}`,
+                        formatRupiah(item.price),
+                        formatRupiah(item.qty * item.price)
+                    ];
+                });
 
-                // Add Total Row
                 tableBody.push([
-                    { content: 'TOTAL', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
-                    { content: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(calculateTotal()), styles: { fontStyle: 'bold' } }
+                    { content: 'TOTAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: formatRupiah(calculateTotal()), styles: { fontStyle: 'bold', halign: 'center' } }
                 ]);
 
                 doc.autoTable({
                     startY: yPos,
-                    head: [['Deskripsi', 'Vol', 'Sat', 'Harga Satuan', 'Jumlah']],
+                    head: [['Material', 'Kuantitas', 'Harga Satuan', 'Total Harga']],
                     body: tableBody,
                     theme: 'grid',
-                    headStyles: { fillColor: [41, 128, 185], textColor: 255, font: 'helvetica', fontSize: 10 },
-                    styles: { font: 'helvetica', fontSize: 10, cellPadding: 2 }, // Isi tabel sedikit lebih kecil dari body text
+                    headStyles: {
+                        fillColor: null,
+                        textColor: 0,
+                        fontStyle: 'bold',
+                        fontSize: 11,
+                        lineWidth: 0.1,
+                        lineColor: 0,
+                        halign: 'center'
+                    },
+                    styles: {
+                        font: 'helvetica',
+                        fontSize: 11,
+                        cellPadding: 2,
+                        textColor: 0,
+                        lineColor: 0,
+                        lineWidth: 0.1
+                    },
                     columnStyles: {
-                        0: { cellWidth: 80 },
-                        1: { cellWidth: 20, halign: 'center' },
-                        2: { cellWidth: 15, halign: 'center' },
-                        3: { cellWidth: 35, halign: 'right' },
-                        4: { cellWidth: 35, halign: 'right' }
+                        0: { cellWidth: 70, halign: 'left' },
+                        1: { cellWidth: 35, halign: 'center', valign: 'middle' },
+                        2: { cellWidth: 40, halign: 'center', valign: 'middle' },
+                        3: { cellWidth: 40, halign: 'center', valign: 'middle' }
                     },
                     margin: { left: marginLeft, right: marginRight },
-                    // Logic to add background if table splits page
-                    didDrawPage: (data) => {
-                        // We handle page adding manually mostly, but autotable might add pages.
-                        // Hook to ensure background is present would be ideal, 
-                        // but simple autotable usage usually just draws on current.
-                        // If AutoTable adds a page, we need to inject the BG.
-                        if (data.pageNumber > 1 && assets.background) {
-                             // Re-draw background if autotable created a new page
-                             // Note: jsPDF autoTable hooks are tricky with z-index.
-                             // Simplified: We assume short tables. If long, manual loop is safer.
+                    willDrawPage: (data) => {
+                        if (data.pageNumber > 1) {
+                            const bg = assets.background2 || assets.background;
+                            if (bg) doc.addImage(bg, 'JPEG', 0, 0, 210, 297);
+                        }
+                    },
+                    didDrawCell: (data) => {
+                        if (data.section === 'body' && data.column.index === 0) {
+                            const rowIndex = data.row.index;
+                            if (rowIndex >= formData.items.length) return;
+
+                            const item = formData.items[rowIndex];
+                            let cellText = item.desc;
+
+                            const { x, y, width, height } = data.cell;
+                            doc.setFillColor(255, 255, 255);
+                            doc.rect(x + 0.2, y + 0.2, width - 0.4, height - 0.4, 'F');
+
+                            doc.setTextColor(0, 0, 0);
+                            doc.setFontSize(11);
+
+                            const lines = cellText.split('\n');
+                            let currentY = y + 4;
+                            const cellInnerWidth = width - 4;
+
+                            lines.forEach(line => {
+                                const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
+
+                                let startX = x + 2;
+
+                                if (labelMatch) {
+                                    doc.setFont("helvetica", "bold");
+                                    const label = labelMatch[1] + " ";
+                                    doc.text(label, startX, currentY);
+                                    startX += doc.getTextWidth(label);
+
+                                    const value = labelMatch[2];
+                                    drawRichLine(doc, value, startX, currentY, cellInnerWidth - (startX - (x + 2)));
+                                } else {
+                                    drawRichLine(doc, line, startX, currentY, cellInnerWidth);
+                                }
+
+                                currentY = doc.__lastLineY || (currentY + 5);
+                            });
                         }
                     }
                 });
 
                 yPos = doc.lastAutoTable.finalY + 12;
 
-                // Check page break logic
-                if (yPos > 230) { // 230mm is safe limit before footer
+                if (yPos > 262) {
                     doc.addPage();
-                    addBackground(); // Add BG to new page
+                    addBackground();
                     yPos = marginTop;
                 }
 
-                // 4. SYARAT & KONDISI
+                // TERMS
+                doc.setFontSize(11);
                 doc.setFont("helvetica", "bold");
-                doc.text("Syarat dan Kondisi:", marginLeft, yPos);
-                yPos += 6;
+                doc.text("Kondisi Penawaran:", marginLeft, yPos);
+                yPos += 5;
                 doc.setFont("helvetica", "normal");
-                
-                const termsLines = doc.splitTextToSize(formData.terms, 170);
-                
-                // If terms are too long
-                if (yPos + (termsLines.length * 6) > 250) {
+
+                let processedTerms = formData.terms;
+                processedTerms = processedTerms.replace(/\[NAMA_PROYEK\]/g, formData.projectName || "....................");
+
+                const dateObj = new Date(formData.date);
+                dateObj.setDate(dateObj.getDate() + 14);
+                const validUntil = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+                processedTerms = processedTerms.replace(/\[TANGGAL_BERLAKU\]/g, validUntil);
+
+                const termsLines = doc.splitTextToSize(processedTerms, 170);
+
+                if (yPos + (termsLines.length * 4.5) > 262) {
                     doc.addPage();
-                    addBackground(); // Add BG to new page
+                    addBackground();
                     yPos = marginTop;
                 }
-                
+
                 doc.text(termsLines, marginLeft, yPos);
-                yPos += (termsLines.length * 6) + 15;
+                yPos += (termsLines.length * 4.5) + 6;
 
-                // Check space for signature
-                if (yPos > 220) {
+                const closing = "Demikian penawaran harga ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.";
+                const closingLines = doc.splitTextToSize(closing, 170);
+
+                if (yPos + (closingLines.length * 4.5) > 262) {
                     doc.addPage();
-                    addBackground(); // Add BG to new page
+                    addBackground();
+                    yPos = marginTop;
+                }
+                doc.text(closingLines, marginLeft, yPos);
+                yPos += (closingLines.length * 4.5) + 10;
+
+                doc.setFontSize(11);
+
+                if (yPos > 245) {
+                    doc.addPage();
+                    addBackground();
                     yPos = marginTop;
                 }
 
-                // 5. SIGNATURE
-                doc.text("Hormat kami,", 140, yPos);
-                doc.text("PT MULTIBANGUN REKATAMA PATRIA", 140, yPos + 6);
-                
-                // Signature Image
-                if (currentUser.signature) {
-                    doc.addImage(currentUser.signature, 'PNG', 140, yPos + 10, 40, 25);
-                } else {
-                    doc.text("(...........................)", 140, yPos + 25);
-                }
-                
-                yPos += 40;
-                doc.setFont("helvetica", "bold");
-                doc.text(currentUser.name, 140, yPos);
-                doc.setFont("helvetica", "normal");
-                doc.text(currentUser.title, 140, yPos + 6);
+                // SIGNATURE
+                doc.text("Hormat kami,", marginLeft, yPos);
 
-                // Save
-                const fileName = `Penawaran_${formData.clientName.replace(/ /g, '_')}_${tab}.pdf`;
-                doc.save(fileName);
+                if (senderProfile.signature && signDims) {
+                    doc.addImage(senderProfile.signature, null, marginLeft, yPos + 4, signDims.width, signDims.height);
+                } else if (senderProfile.signature) {
+                    doc.addImage(senderProfile.signature, null, marginLeft, yPos + 4, 40, 25);
+                } else {
+                    doc.text("(...........................)", marginLeft, yPos + 25);
+                }
+
+                yPos += 35;
+                doc.setFont("helvetica", "bold");
+                doc.text(senderProfile.name || "[Nama Pengirim]", marginLeft, yPos);
+
+                yPos += 5;
+                doc.setFont("helvetica", "normal");
+                doc.text(senderProfile.title || "[Jabatan]", marginLeft, yPos);
+
+                yPos += 5;
+                doc.setFont("helvetica", "normal");
+                doc.text(senderProfile.phone || "", marginLeft, yPos);
+
+                return doc;
             };
 
-            // RENDER LOGIC
-            if (!currentUser) {
-                return <LoginScreen users={users} onLogin={setCurrentUser} />;
-            }
+            const getImageDimensions = (src) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ width: img.width, height: img.height });
+                    img.onerror = reject;
+                    img.src = src;
+                });
+            };
+
+            const handlePreview = async () => {
+                let signDims = null;
+                if (senderProfile && senderProfile.signature) {
+                    try {
+                        const dims = await getImageDimensions(senderProfile.signature);
+                        const maxWidth = 40;
+                        const maxHeight = 25;
+                        const ratio = Math.min(maxWidth / dims.width, maxHeight / dims.height);
+
+                        signDims = {
+                            width: dims.width * ratio,
+                            height: dims.height * ratio
+                        };
+                    } catch (e) {
+                        console.error("Error loading signature image", e);
+                    }
+                }
+
+                const doc = createPDFDoc(signDims);
+                const blob = doc.output('blob');
+                const url = URL.createObjectURL(blob);
+                setPdfUrl(url);
+                setShowPreview(true);
+            };
+
+            const closePreview = () => {
+                setShowPreview(false);
+                if (pdfUrl) {
+                    URL.revokeObjectURL(pdfUrl);
+                    setPdfUrl(null);
+                }
+            };
+
+            // Render Description with Bold Support
+            const renderDescription = (text) => {
+                if (!text) return "";
+                return text.split('\n').map((line, i) => {
+                    const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
+
+                    let content = [];
+                    let remainder = line;
+
+                    if (labelMatch) {
+                        const label = labelMatch[1];
+                        const value = labelMatch[2];
+                        content.push(<span key="label" className="font-bold">{label} </span>);
+                        remainder = value;
+                    }
+
+                    const parts = remainder.split('*');
+                    parts.forEach((part, idx) => {
+                        if (idx % 2 === 1) {
+                            content.push(<span key={idx} className="font-bold">{part}</span>);
+                        } else {
+                            content.push(<span key={idx}>{part}</span>);
+                        }
+                    });
+
+                    return <div key={i}>{content}</div>;
+                });
+            };
 
             return (
-                <div className="min-h-screen pb-20 font-arial text-[11pt]">
+                <div className="min-h-screen pb-20">
                     {/* NAVBAR */}
                     <div className="bg-white shadow border-b sticky top-0 z-50">
-                        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Icons.FileText className="text-blue-600" />
-                                <h1 className="font-bold text-xl hidden sm:block">Multibangun Offer System v2</h1>
+                                <h1 className="font-bold text-xl hidden sm:block">Multibangun Offer System</h1>
+                                <button onClick={() => setShowSaved(true)} className="ml-4 flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-blue-200">
+                                    <Icons.FileText size={14} /> Data Tersimpan
+                                </button>
+                                <button onClick={handleNewQuotation} className="ml-2 flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-green-200">
+                                    <Icons.Plus size={14} /> Buat Baru
+                                </button>
                             </div>
                             <div className="flex items-center gap-4">
-                                <div className="text-right hidden sm:block">
-                                    <div className="font-bold text-sm">{currentUser.name}</div>
-                                    <div className="text-xs text-gray-500">{currentUser.title}</div>
-                                </div>
-                                <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-gray-100 rounded text-gray-600">
+                                <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-gray-100 rounded text-gray-600 flex items-center gap-2">
                                     <Icons.Settings size={20} />
-                                </button>
-                                <button onClick={() => setCurrentUser(null)} className="p-2 hover:bg-red-50 rounded text-red-600">
-                                    <Icons.LogOut size={20} />
+                                    <span className="hidden sm:inline text-sm">Pengaturan</span>
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
-                        
-                        {/* LEFT: FORM INPUT */}
-                        <div className="flex-1 bg-white p-6 rounded shadow-sm h-fit z-10 relative">
-                            
-                            {/* TABS */}
-                            <div className="flex bg-gray-100 p-1 rounded-lg mb-6 overflow-x-auto">
-                                <button onClick={() => tab !== 'multiblock' && handleTabChange('multiblock')} className={`flex-1 py-2 px-3 text-sm font-bold rounded-md whitespace-nowrap ${tab === 'multiblock' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Retaining Wall</button>
-                                <button onClick={() => tab !== 'material' && handleTabChange('material')} className={`flex-1 py-2 px-3 text-sm font-bold rounded-md whitespace-nowrap ${tab === 'material' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Geomembrane (Mat)</button>
-                                <button onClick={() => tab !== 'install' && handleTabChange('install')} className={`flex-1 py-2 px-3 text-sm font-bold rounded-md whitespace-nowrap ${tab === 'install' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Geomembrane (Pasang)</button>
-                            </div>
+                    <div className="max-w-4xl mx-auto px-4 py-8">
+
+                        {/* FORM */}
+                        <div className="bg-white p-6 rounded shadow-sm">
 
                             {/* CLIENT INFO */}
-                            <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                            <div className="grid grid-cols-2 gap-4 mb-6">
                                 <div className="col-span-2">
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Nama Klien (PT)</label>
-                                    <input type="text" className="w-full border p-2 rounded" placeholder="PT Contoh Sejahtera" value={formData.clientName} onChange={e => setFormData({...formData, clientName: e.target.value})} />
+                                    <input type="text" className="w-full border p-2 rounded" placeholder="PT Contoh Sejahtera" value={formData.clientName} onChange={e => setFormData({ ...formData, clientName: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 mb-1">UP (Person)</label>
-                                    <input type="text" className="w-full border p-2 rounded" placeholder="Bpk. Budi" value={formData.clientUp} onChange={e => setFormData({...formData, clientUp: e.target.value})} />
+                                    <input type="text" className="w-full border p-2 rounded" placeholder="Bpk. Budi" value={formData.clientUp} onChange={e => setFormData({ ...formData, clientUp: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Nomor Surat</label>
-                                    <input type="text" className="w-full border p-2 rounded" value={formData.noSurat} onChange={e => setFormData({...formData, noSurat: e.target.value})} />
+                                    <input type="text" className="w-full border p-2 rounded" value={formData.noSurat} onChange={e => setFormData({ ...formData, noSurat: e.target.value })} />
                                 </div>
+
+                                {/* Phone & Email Toggles */}
+                                <div className="col-span-2 flex flex-wrap gap-2">
+                                    {!showClientPhone && (
+                                        <button onClick={() => setShowClientPhone(true)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1">
+                                            <Icons.Plus size={12} /> Tambah No. Telpon
+                                        </button>
+                                    )}
+                                    {!showClientEmail && (
+                                        <button onClick={() => setShowClientEmail(true)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1">
+                                            <Icons.Plus size={12} /> Tambah Email
+                                        </button>
+                                    )}
+                                </div>
+
+                                {showClientPhone && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">No. Telpon</label>
+                                        <div className="flex gap-1">
+                                            <input type="text" className="w-full border p-2 rounded" placeholder="081..." value={formData.clientPhone || ""} onChange={e => setFormData({ ...formData, clientPhone: e.target.value })} />
+                                            <button onClick={() => { setShowClientPhone(false); setFormData({ ...formData, clientPhone: "" }); }} className="text-red-400 hover:text-red-600 p-2"><Icons.Trash2 size={14} /></button>
+                                        </div>
+                                    </div>
+                                )}
+                                {showClientEmail && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Email</label>
+                                        <div className="flex gap-1">
+                                            <input type="text" className="w-full border p-2 rounded" placeholder="email@example.com" value={formData.clientEmail || ""} onChange={e => setFormData({ ...formData, clientEmail: e.target.value })} />
+                                            <button onClick={() => { setShowClientEmail(false); setFormData({ ...formData, clientEmail: "" }); }} className="text-red-400 hover:text-red-600 p-2"><Icons.Trash2 size={14} /></button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="col-span-2">
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Alamat Klien</label>
-                                    <textarea className="w-full border p-2 rounded h-20" placeholder="Jl. Raya..." value={formData.clientAddress} onChange={e => setFormData({...formData, clientAddress: e.target.value})} />
+                                    <textarea className="w-full border p-2 rounded h-20" placeholder="Jl. Raya..." value={formData.clientAddress} onChange={e => setFormData({ ...formData, clientAddress: e.target.value })} />
                                 </div>
                                 <div className="col-span-2">
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Nama Proyek & Lokasi</label>
-                                    <input type="text" className="w-full border p-2 rounded" placeholder="Pembangunan Tol..." value={formData.projectName} onChange={e => setFormData({...formData, projectName: e.target.value})} />
+                                    <input type="text" className="w-full border p-2 rounded" placeholder="Pembangunan Tol..." value={formData.projectName} onChange={e => setFormData({ ...formData, projectName: e.target.value })} />
                                 </div>
                             </div>
 
                             {/* ITEMS TABLE */}
                             <div className="mb-6">
-                                <h3 className="font-bold mb-2 flex justify-between items-center text-sm">
+                                <h3 className="font-bold mb-2 flex justify-between items-center">
                                     Item Penawaran
-                                    <button onClick={addItem} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-green-200"><Icons.Plus size={14}/> Tambah Biaya</button>
+                                    <div className="flex gap-2">
+                                        <button onClick={addMaterial} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-blue-200">
+                                            <Icons.Plus size={14} /> Tambah Material
+                                        </button>
+                                        <button onClick={addItem} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-green-200">
+                                            <Icons.Plus size={14} /> Tambah Biaya
+                                        </button>
+                                    </div>
                                 </h3>
                                 <div className="border rounded overflow-hidden">
-                                    <table className="w-full text-sm">
+                                    <table className="w-full">
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th className="p-2 text-left">Deskripsi</th>
@@ -629,22 +1440,38 @@ Pembayaran:
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {formData.items.map((item, idx) => (
-                                                <tr key={idx} className="border-t">
-                                                    <td className="p-2"><input type="text" className="w-full bg-transparent outline-none" value={item.desc} onChange={e => updateItem(idx, 'desc', e.target.value)} /></td>
-                                                    <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-center" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} /></td>
-                                                    <td className="p-2"><input type="text" className="w-full bg-transparent outline-none text-center" value={item.unit} onChange={e => updateItem(idx, 'unit', e.target.value)} /></td>
-                                                    <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-right" value={item.price} onChange={e => updateItem(idx, 'price', Number(e.target.value))} /></td>
-                                                    <td className="p-2 text-center">
-                                                        <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600"><Icons.Trash2 size={14} /></button>
+                                            {formData.items.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="5" className="p-8 text-center text-gray-400">
+                                                        Belum ada item. Klik "Tambah Material" atau "Tambah Biaya" untuk menambahkan.
                                                     </td>
                                                 </tr>
-                                            ))}
-                                            <tr className="bg-blue-50 font-bold">
-                                                <td colSpan={3} className="p-2 text-right">TOTAL</td>
-                                                <td className="p-2 text-right">{formatRupiah(calculateTotal())}</td>
-                                                <td></td>
-                                            </tr>
+                                            ) : (
+                                                formData.items.map((item, idx) => (
+                                                    <tr key={idx} className="border-t align-top">
+                                                        <td className="p-2">
+                                                            <div className="relative group">
+                                                                <button onClick={() => handleBold(idx)} className="absolute right-0 top-0 bg-gray-200 hover:bg-gray-300 px-2 py-0.5 rounded text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity" title="Bold Selection">B</button>
+                                                                <textarea id={`item-desc-${idx}`} className="w-full bg-transparent outline-none resize-none h-24" placeholder="Deskripsi item..." value={item.desc} onChange={e => updateItem(idx, 'desc', e.target.value)}></textarea>
+                                                                <div className="text-[9pt] text-gray-400 mt-1">Gunakan *text* untuk bold</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-center" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} /></td>
+                                                        <td className="p-2"><input type="text" className="w-full bg-transparent outline-none text-center" value={item.unit} onChange={e => updateItem(idx, 'unit', e.target.value)} /></td>
+                                                        <td className="p-2"><input type="number" className="w-full bg-transparent outline-none text-right" value={item.price} onChange={e => updateItem(idx, 'price', Number(e.target.value))} /></td>
+                                                        <td className="p-2 text-center">
+                                                            <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600"><Icons.Trash2 size={14} /></button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                            {formData.items.length > 0 && (
+                                                <tr className="bg-blue-50 font-bold">
+                                                    <td colSpan={3} className="p-2 text-right">TOTAL</td>
+                                                    <td className="p-2 text-right">{formatRupiah(calculateTotal())}</td>
+                                                    <td></td>
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -652,103 +1479,76 @@ Pembayaran:
 
                             {/* TERMS */}
                             <div className="mb-6">
-                                <label className="block text-xs font-bold text-gray-500 mb-1">Syarat & Kondisi (Edit seperlunya)</label>
-                                <textarea className="w-full border p-2 rounded h-64 text-sm font-mono leading-relaxed" value={formData.terms} onChange={e => setFormData({...formData, terms: e.target.value})} />
-                            </div>
-
-                            <button onClick={generatePDF} className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">
-                                <Icons.Printer size={20} /> CETAK PDF SEKARANG
-                            </button>
-                        </div>
-
-                        {/* RIGHT: PREVIEW (HTML VISUALIZATION) */}
-                        <div className="hidden lg:block w-[210mm]">
-                            <h3 className="text-center text-gray-500 mb-4 font-bold text-sm uppercase tracking-wide">Live Layout Preview</h3>
-                            
-                            {/* Kertas Preview A4 */}
-                            <div className="preview-paper mx-auto">
-                                
-                                {/* Background Image Layer */}
-                                {assets.background && (
-                                    <img src={assets.background} className="paper-background" alt="Letterhead" />
-                                )}
-
-                                {/* Content Layer (Safe Zone) */}
-                                <div className="paper-content">
-                                    
-                                    {!assets.background && <div className="text-center text-red-400 text-sm border-2 border-dashed border-red-300 p-4 mb-4">Background belum diupload. <br/>Pergi ke Settings -> Upload Full Background.</div>}
-
-                                    <div className="flex justify-between mb-8">
-                                        <div>
-                                            <div className="font-bold">No: {formData.noSurat}</div>
-                                            <div>Hal: Penawaran Harga</div>
-                                            <div className="mt-4">
-                                                <div>Kepada Yth:</div>
-                                                <div className="font-bold text-lg uppercase">{formData.clientName || "[Nama Klien]"}</div>
-                                                <div className="w-64">{formData.clientAddress || "[Alamat Klien]"}</div>
-                                                <div className="mt-2">Up: {formData.clientUp}</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            Jakarta, {new Date(formData.date).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
-                                        </div>
-                                    </div>
-
-                                    <div className="mb-4">
-                                        Dengan hormat,<br/>
-                                        Sehubungan dengan kebutuhan proyek <b>{formData.projectName}</b>, berikut kami sampaikan penawaran harga:
-                                    </div>
-
-                                    <table className="w-full border-collapse mb-8">
-                                        <thead className="bg-blue-600 text-white text-xs">
-                                            <tr>
-                                                <th className="p-2 text-left">Deskripsi</th>
-                                                <th className="p-2 text-center">Vol</th>
-                                                <th className="p-2 text-right">Harsat</th>
-                                                <th className="p-2 text-right">Jumlah</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="text-sm">
-                                            {formData.items.map((item, i) => (
-                                                <tr key={i} className="border-b">
-                                                    <td className="p-2">{item.desc}</td>
-                                                    <td className="p-2 text-center">{item.qty} {item.unit}</td>
-                                                    <td className="p-2 text-right">{new Intl.NumberFormat('id-ID').format(item.price)}</td>
-                                                    <td className="p-2 text-right">{new Intl.NumberFormat('id-ID').format(item.price * item.qty)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-
-                                    <div className="text-xs whitespace-pre-wrap font-sans mb-8 leading-relaxed">
-                                        <strong className="block text-sm mb-2">Syarat & Kondisi:</strong>
-                                        {formData.terms}
-                                    </div>
-
-                                    <div className="flex justify-end mt-12">
-                                        <div className="text-center w-48">
-                                            <div className="mb-1">Hormat Kami,</div>
-                                            <div className="font-bold mb-4">PT MULTIBANGUN R.P.</div>
-                                            <div className="h-20 flex items-center justify-center">
-                                                {currentUser.signature ? <img src={currentUser.signature} className="max-h-20" /> : <span className="text-gray-300 text-xs border p-1">Area Tanda Tangan</span>}
-                                            </div>
-                                            <div className="font-bold underline">{currentUser.name}</div>
-                                            <div className="text-xs">{currentUser.title}</div>
-                                        </div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-xs font-bold text-gray-500">Syarat & Kondisi</label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-500">Template:</span>
+                                        <select
+                                            className="border rounded px-3 py-1 text-sm bg-white"
+                                            value={termsTemplate}
+                                            onChange={(e) => handleTermsTemplateChange(e.target.value)}
+                                        >
+                                            <option value="retaining">Retaining Wall</option>
+                                            <option value="material">Material</option>
+                                            <option value="install">Material + Instalasi</option>
+                                        </select>
                                     </div>
                                 </div>
+                                <textarea className="w-full border p-2 rounded h-64 font-mono leading-relaxed" value={formData.terms} onChange={e => setFormData({ ...formData, terms: e.target.value })} />
+                                <div className="text-[9pt] text-gray-400 mt-1">
+                                    Placeholder: [NAMA_PROYEK] = nama proyek, [TANGGAL_BERLAKU] = 14 hari dari tanggal surat
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button onClick={handleSaveQuotation} className="w-full bg-white border-2 border-blue-600 text-blue-600 py-4 rounded-lg font-bold shadow-sm hover:bg-blue-50 flex items-center justify-center gap-2">
+                                    <Icons.FileText size={20} /> SIMPAN
+                                </button>
+                                <button onClick={() => setShowEditablePreview(true)} className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">
+                                    <Icons.Edit size={20} /> PREVIEW & EDIT
+                                </button>
                             </div>
                         </div>
 
                     </div>
 
-                    <SettingsModal 
-                        isOpen={showSettings} 
+                    <SettingsModal
+                        isOpen={showSettings}
                         onClose={() => setShowSettings(false)}
-                        users={users}
-                        setUsers={setUsers}
+                        senderProfile={senderProfile}
+                        setSenderProfile={setSenderProfile}
                         assets={assets}
                         setAssets={setAssets}
+                    />
+
+                    <SavedQuotationsModal
+                        isOpen={showSaved}
+                        onClose={() => setShowSaved(false)}
+                        savedQuotations={savedQuotations}
+                        onRetrieve={handleRetrieveQuotation}
+                        onDelete={handleDeleteQuotation}
+                    />
+
+                    <PreviewModal
+                        isOpen={showPreview}
+                        onClose={closePreview}
+                        pdfUrl={pdfUrl}
+                    />
+
+                    <EditablePreviewModal
+                        isOpen={showEditablePreview}
+                        onClose={() => setShowEditablePreview(false)}
+                        formData={formData}
+                        setFormData={setFormData}
+                        assets={assets}
+                        senderProfile={senderProfile}
+                        termsTemplate={termsTemplate}
+                        onGeneratePDF={() => {
+                            setShowEditablePreview(false);
+                            handlePreview();
+                        }}
+                        formatRupiah={formatRupiah}
+                        calculateTotal={calculateTotal}
                     />
                 </div>
             );
@@ -758,4 +1558,5 @@ Pembayaran:
         root.render(<App />);
     </script>
 </body>
+
 </html>
