@@ -34,7 +34,7 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             color: #000;
             position: relative;
-            overflow: visible;
+            overflow: hidden;
             margin-bottom: 2rem;
         }
 
@@ -42,11 +42,11 @@
         .paper-content {
             position: relative;
             z-index: 10;
-            padding-top: 45mm;    /* Margin Atas untuk menghindari Header Kop */
-            padding-bottom: 20mm; /* Margin Bawah untuk menghindari Footer */
-            padding-left: 20mm;
-            padding-right: 20mm;
-            font-size: 11pt;      /* Ukuran Font 11 */
+            padding-top: 42.5mm;    /* Margin Atas 4.25cm */
+            padding-bottom: 35mm;   /* Margin Bawah 3.5cm */
+            padding-left: 23mm;     /* Margin Kiri 2.3cm */
+            padding-right: 23mm;    /* Margin Kanan 2.3cm */
+            font-size: 11pt;        /* Ukuran Font 11 */
             line-height: 1.4;
             height: 100%;
             display: flex;
@@ -58,9 +58,8 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: 297mm;
             z-index: 0;
-            object-fit: cover;
         }
 
         @media screen and (max-width: 768px) {
@@ -122,7 +121,7 @@ Pembayaran:
             material: {
                 title: "Penawaran Material Geomembrane",
                 items: [
-                    { materialName: "Material Geomembrane HDPE", brand: "Geoprotec", type: "1.0 mm / 1.5 mm / 2.0 mm", rollSize: "8m x 50m", unit: "m2", qty: 1000, price: 45000 }
+                    { desc: "Material Geomembrane HDPE\nMerk: Geoprotec\nTipe: 1.0 mm / 1.5 mm / 2.0 mm\nUkuran roll: 8m x 50m", unit: "m2", qty: 1000, price: 45000 }
                 ],
                 terms: `• Harga locco Gudang PT. Multibangun Rekatama Patria di Bitung, Tangerang.
 • Harga Material untuk keperluan proyek [NAMA_PROYEK].
@@ -135,7 +134,7 @@ Pembayaran:
             install: {
                 title: "Penawaran Geomembrane + Pemasangan",
                 items: [
-                    { materialName: "Material Geomembrane HDPE", brand: "Geoprotec", type: "1.0 mm", rollSize: "8m x 50m", unit: "m2", qty: 1000, price: 45000 },
+                    { desc: "Material Geomembrane HDPE\nMerk: Geoprotec\nTipe: 1.0 mm\nUkuran roll: 8m x 50m", unit: "m2", qty: 1000, price: 45000 },
                     { desc: "Jasa Instalasi Geomembrane", unit: "m2", qty: 1000, price: 15000 },
                     { desc: "Biaya Mob-Demob & Akomodasi", unit: "Ls", qty: 1, price: 5000000 }
                 ],
@@ -439,30 +438,96 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
             };
 
             const addMaterial = () => {
-                const newItem = { materialName: "Material Baru", brand: "", type: "", rollSize: "", unit: "m2", qty: 1, price: 0 };
+                const newItem = { desc: "Material Baru\nMerk: \nTipe: \nUkuran roll: ", unit: "m2", qty: 1, price: 0 };
                 setFormData({ ...formData, items: [...formData.items, newItem] });
-            };
-
-            const convertToText = (index) => {
-                const item = formData.items[index];
-                if (item.materialName === undefined) return;
-
-                const desc = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
-                const newItem = {
-                    desc,
-                    unit: item.unit,
-                    qty: item.qty,
-                    price: item.price
-                };
-
-                const newItems = [...formData.items];
-                newItems[index] = newItem;
-                setFormData({ ...formData, items: newItems });
             };
 
             const removeItem = (index) => {
                 const newItems = formData.items.filter((_, i) => i !== index);
                 setFormData({ ...formData, items: newItems });
+            };
+
+            // Helper for drawing rich text (Markdown-style *bold*) in PDF
+            const drawRichLine = (doc, text, x, y, maxWidth) => {
+                const parts = text.split('*');
+                let currentX = x;
+                let currentY = y;
+                let buffer = ""; // Current line buffer to measure
+
+                // Flatten parts to words for wrapping?
+                // For simplicity in v2.1: We assume lines don't wrap heavily with bolding mid-sentence.
+                // We'll process parts.
+
+                parts.forEach((part, idx) => {
+                    const isBold = idx % 2 === 1;
+                    doc.setFont("helvetica", isBold ? "bold" : "normal");
+
+                    // Naive approach: Text wrap per part (imperfect but works for short labels)
+                    // Better approach: Split by words, measure, flow.
+
+                    const words = part.split(' ');
+                    words.forEach((word, wIdx) => {
+                        const wordWithSpace = word + (wIdx < words.length - 1 ? " " : "");
+                        const wWidth = doc.getTextWidth(wordWithSpace);
+
+                        // Check wrapping relative to X start
+                        // If currentX + wWidth > x + maxWidth
+                        // But x is absolute left. MaxWidth is width of column.
+                        // Safe right boundary = x + maxWidth
+
+                        // NOTE: x passed to function is the start of *this text block*.
+                        // We need the absolute left margin of the cell to calculate wrapping properly.
+                        // Assuming x is valid start.
+
+                        // Simple wrap protection (assuming cell X starts around 23mm)
+                        // If we drift too far right (e.g. > 90mm), wrap.
+                        // Col width is 70mm. Margin left 23. Max X ~93.
+                        if (currentX > 90) {
+                             currentY += 4;
+                             currentX = 25; // Reset to approx left cell margin
+                        }
+
+                        doc.text(wordWithSpace, currentX, currentY);
+                        currentX += wWidth;
+                    });
+                });
+
+                doc.__lastLineY = currentY + 4.5; // Store next Y for parent loop
+            };
+
+            const renderDescription = (text) => {
+                if (!text) return "";
+                return text.split('\n').map((line, i) => {
+                    // 1. Check for Label: Value pattern at start of line
+                    // Matches any alphanumeric label followed by colon, e.g. "Biaya Angkut:", "Merk:"
+                    // Limit label length to avoid false positives on long sentences
+                    const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
+
+                    let content = [];
+                    let remainder = line;
+
+                    if (labelMatch) {
+                        const label = labelMatch[1];
+                        const value = labelMatch[2];
+                        content.push(<span key="label" className="font-bold">{label} </span>);
+                        remainder = value;
+                    }
+
+                    // 2. Parse Markdown Bold (*text*) in the remainder
+                    // We split by *
+                    const parts = remainder.split('*');
+                    parts.forEach((part, idx) => {
+                         // Even indices are normal, Odd indices are bold (assuming closed pairs)
+                         // Simple parser: *bold* -> part0 (normal), part1 (bold), part2 (normal)
+                         if (idx % 2 === 1) {
+                             content.push(<span key={idx} className="font-bold">{part}</span>);
+                         } else {
+                             content.push(<span key={idx}>{part}</span>);
+                         }
+                    });
+
+                    return <div key={i}>{content}</div>;
+                });
             };
 
             // --- PDF GENERATION ---
@@ -493,9 +558,10 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 addBackground();
 
                 // MARGINS (SAFE ZONE)
-                const marginTop = 45;
-                const marginLeft = 20;
-                const marginRight = 20;
+                const marginTop = 42.5; // 4.25cm
+                const marginLeft = 23;  // 2.3cm
+                const marginRight = 23; // 2.3cm
+                // Bottom is handled by check logic (3.5cm -> max Y approx 262)
                 
                 let yPos = marginTop;
 
@@ -602,41 +668,69 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                             const item = formData.items[rowIndex];
 
+                            // Determine text content
+                            let cellText = "";
                             if (item.materialName !== undefined) {
-                                // Draw a white filled rectangle over the cell area to clear default text
-                                const { x, y, width, height } = data.cell;
-                                doc.setFillColor(255, 255, 255);
-                                doc.rect(x + 0.2, y + 0.2, width - 0.4, height - 0.4, 'F');
-
-                                doc.setTextColor(0, 0, 0);
-                                doc.setFontSize(10);
-
-                                let currentY = y + 4;
-
-                                doc.setFont("helvetica", "bold");
-                                doc.text(item.materialName, x + 2, currentY);
-                                currentY += 5;
-
-                                doc.text("Merk: ", x + 2, currentY);
-                                const merkWidth = doc.getTextWidth("Merk: ");
-                                doc.setFont("helvetica", "bold");
-                                doc.text(item.brand, x + 2 + merkWidth, currentY);
-                                currentY += 5;
-
-                                doc.setFont("helvetica", "normal");
-                                doc.text(`Tipe: ${item.type}`, x + 2, currentY);
-                                currentY += 5;
-
-                                doc.text(`Ukuran roll: ${item.rollSize}`, x + 2, currentY);
+                                // Legacy support or just use the constructed string
+                                cellText = `${item.materialName}\nMerk: ${item.brand}\nTipe: ${item.type}\nUkuran roll: ${item.rollSize}`;
+                            } else {
+                                cellText = item.desc;
                             }
+
+                            // Clean the cell
+                            const { x, y, width, height } = data.cell;
+                            doc.setFillColor(255, 255, 255);
+                            doc.rect(x + 0.2, y + 0.2, width - 0.4, height - 0.4, 'F');
+
+                            doc.setTextColor(0, 0, 0);
+                            doc.setFontSize(10);
+
+                            // Parse and Draw
+                            const lines = cellText.split('\n');
+                            let currentY = y + 4;
+                            const cellInnerWidth = width - 4; // 2mm padding each side
+
+                            lines.forEach(line => {
+                                // 1. Check for Label: Value pattern at start of line
+                                const labelMatch = line.match(/^([^:\n]{1,40}:)\s*(.*)/);
+
+                                let startX = x + 2;
+
+                                if (labelMatch) {
+                                    // Label (Bold)
+                                    doc.setFont("helvetica", "bold");
+                                    const label = labelMatch[1] + " "; // Add space
+                                    doc.text(label, startX, currentY);
+                                    startX += doc.getTextWidth(label);
+
+                                    // Process Remainder (Value)
+                                    // Note: Simple rich text support for *bold* in value part is complex with wrapping.
+                                    // For now, we render the rest as normal text, but support *bold* if it doesn't wrap weirdly?
+                                    // To keep it safe: Render remainder normally, stripping * for now or simple parse?
+                                    // Let's support simple *bold* parsing even in value.
+
+                                    const value = labelMatch[2];
+                                    drawRichLine(doc, value, startX, currentY, cellInnerWidth - (startX - (x+2)));
+                                } else {
+                                    // Normal Line (check for *bold*)
+                                    drawRichLine(doc, line, startX, currentY, cellInnerWidth);
+                                }
+
+                                // Estimate line height advancement (approximate, since drawRichLine handles single line logic mostly)
+                                // If wrapped, drawRichLine returns next Y?
+                                // Complex wrapping logic is hard to inject here perfectly.
+                                // Fallback: We advance fixed amount per "paragraph" line from source.
+                                // Refinement: drawRichLine needs to handle wrapping internally and return newY.
+                                currentY = doc.__lastLineY || (currentY + 5);
+                            });
                         }
                     }
                 });
 
                 yPos = doc.lastAutoTable.finalY + 12;
 
-                // Check page break logic
-                if (yPos > 240) {
+                // Check page break logic (297mm - 35mm = 262mm)
+                if (yPos > 262) {
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
@@ -660,7 +754,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
 
                 const termsLines = doc.splitTextToSize(processedTerms, 170);
                 
-                if (yPos + (termsLines.length * 4.5) > 260) {
+                if (yPos + (termsLines.length * 4.5) > 262) {
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
@@ -673,7 +767,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 const closing = "Demikian penawaran harga ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.";
                 const closingLines = doc.splitTextToSize(closing, 170);
 
-                if (yPos + (closingLines.length * 4.5) > 260) {
+                if (yPos + (closingLines.length * 4.5) > 262) {
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
@@ -684,7 +778,7 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                 doc.setFontSize(11);
 
                 // Check space for signature
-                if (yPos > 245) {
+                if (yPos > 245) { // Leave enough space for signature block
                     doc.addPage();
                     addBackground();
                     yPos = marginTop;
@@ -1008,7 +1102,9 @@ o Instalasi: DP XX%, sisa pelunasan sesuai dengan prosentase progress pekerjaan 
                                                                             <div>Tipe: {item.type}</div>
                                                                             <div>Ukuran roll: {item.rollSize}</div>
                                                                         </div>
-                                                                    ) : item.desc}
+                                                                    ) : (
+                                                                        <div className="whitespace-pre-wrap">{renderDescription(item.desc)}</div>
+                                                                    )}
                                                                 </td>
                                                                 <td className="p-2 text-center border border-black align-top">{item.qty} {item.unit}</td>
                                                                 <td className="p-2 text-center border border-black align-top">{formatRupiah(item.price)}</td>
